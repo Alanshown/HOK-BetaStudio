@@ -21,9 +21,6 @@ Duyệt gói DB theo tướng và trang phục, kiểm tra dữ liệu Unity l�
 
 **[Ảnh chụp](#export) · [Bản phát hành](https://github.com/Alanshown/HOK-BetaStudio/releases) · [Báo lỗi](https://github.com/Alanshown/HOK-BetaStudio/issues)**
 
-> [!NOTE]
-> Phiên bản 1.2 đang được phát triển. Gói portable và bộ cài đầy đủ đã được chuẩn bị riêng; việc phát hành công khai đang chờ kiểm tra quyền phân phối hình ảnh và thành phần bên thứ ba.
-
 ![Danh mục tướng trong ứng dụng desktop](docs/images/01-catalog.png)
 
 ## Mục lục

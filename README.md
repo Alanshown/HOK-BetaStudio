@@ -21,9 +21,6 @@ Browse DB packages by hero and skin, inspect Unity and non-Unity entries, previe
 
 **[Screenshots](#export) · [Releases](https://github.com/Alanshown/HOK-BetaStudio/releases) · [Issues](https://github.com/Alanshown/HOK-BetaStudio/issues)**
 
-> [!NOTE]
-> Version 1.2 is in development. Full portable and installer packages are prepared privately; public binary distribution is pending artwork and third-party component review.
-
 ![Hero catalog in the desktop application](docs/images/01-catalog.png)
 
 ## Contents

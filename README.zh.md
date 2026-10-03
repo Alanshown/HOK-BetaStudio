@@ -21,9 +21,6 @@
 
 **[程序截图](#export) · [版本下载](https://github.com/Alanshown/HOK-BetaStudio/releases) · [问题反馈](https://github.com/Alanshown/HOK-BetaStudio/issues)**
 
-> [!NOTE]
-> 1.2 版本仍在开发中。完整便携包和安装包已在本地准备好，公开发布需先完成素材与第三方组件分发检查。
-
 ![桌面程序的英雄目录](docs/images/01-catalog.png)
 
 ## 目录
