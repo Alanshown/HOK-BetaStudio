@@ -19,10 +19,10 @@
 
 Duyệt gói DB theo tướng và trang phục, kiểm tra dữ liệu Unity lẫn dữ liệu khác, xem mô hình, nghe âm thanh và xuất hàng loạt. Backend C# tách việc phân tích, xem trước và xuất khỏi tiến trình giao diện.
 
-**[Tham quan qua ảnh](docs/index.html) · [Bản phát hành](https://github.com/Alanshown/HOK-BetaStudio/releases) · [Báo lỗi](https://github.com/Alanshown/HOK-BetaStudio/issues)**
+**[Ảnh chụp](#export) · [Bản phát hành](https://github.com/Alanshown/HOK-BetaStudio/releases) · [Báo lỗi](https://github.com/Alanshown/HOK-BetaStudio/issues)**
 
 > [!NOTE]
-> Phiên bản 1.2 đang được phát triển. Gói portable và bộ cài đầy đủ được chuẩn bị riêng; việc phát hành công khai đang chờ kiểm tra quyền phân phối hình ảnh và thành phần bên thứ ba. Trang tham quan dùng ảnh chụp thật, không phải bộ phân tích DB trực tuyến.
+> Phiên bản 1.2 đang được phát triển. Gói portable và bộ cài đầy đủ đã được chuẩn bị riêng; việc phát hành công khai đang chờ kiểm tra quyền phân phối hình ảnh và thành phần bên thứ ba.
 
 ![Danh mục tướng trong ứng dụng desktop](docs/images/01-catalog.png)
 
@@ -105,7 +105,7 @@ HOK-BetaStudio/
 ├── frontend/                # React + TypeScript + Three.js
 ├── vendor/Studio-HoK/        # upstream C# source and attribution
 ├── assets/                  # UI assets, catalog and license notices
-├── docs/                    # GitHub Pages tour and real screenshots
+├── docs/                    # documentation and real screenshots
 ├── tooling/                 # build, packaging and verification scripts
 ├── README.md
 ├── README.zh.md
@@ -136,7 +136,7 @@ powershell -ExecutionPolicy Bypass -File tooling/build-desktop.ps1 -OutputDirect
 powershell -ExecutionPolicy Bypass -File tooling/package-desktop.ps1 -BuildDirectory build/HOK-BetaStudio-1.2-win-x64
 ```
 
-Trang tham quan tĩnh không cần cài gói phụ thuộc. Với GitHub Pages, chọn **Deploy from a branch → main → /docs**. Tự bật Pages khi sẵn sàng; trước đó liên kết HTML trong kho chỉ hiển thị mã nguồn, không phải website đã triển khai.
+Trang trình diễn được duy trì riêng và không nằm trong kho này. Các hình ở trên là ảnh chụp ứng dụng desktop thực tế.
 
 <a id="download"></a>
 ## Tải xuống và sử dụng

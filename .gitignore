@@ -40,3 +40,9 @@ assets/icons/app/*-1024.png
 assets/icons/app/*-512.png
 assets/placeholders/*-1024.png
 assets/placeholders/*-512.png
+docs/index.html
+docs/site.css
+docs/site.js
+docs/.nojekyll
+docs/fonts/
+opendesign/

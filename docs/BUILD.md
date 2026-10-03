@@ -30,11 +30,9 @@ Media versions and source URLs are in `assets/licenses/media/NOTICE.txt`. Native
 
 Do not use an empty public fixture directory to infer game compatibility. The source snapshot can compile without game data, but native previews and fixture integration tests require separately supplied inputs.
 
-## Static demo / GitHub Pages
+## Documentation
 
-`docs/index.html`, `docs/site.css`, `docs/site.js`, `docs/images/` and `docs/fonts/` form a static, self-contained screenshot tour. It has no npm dependencies, backend, telemetry or upload endpoint. Buttons switch real screenshots; they do not pretend to parse a DB in the browser. Relative URLs work under `/HOK-BetaStudio/`.
-
-On GitHub, choose Settings → Pages → Deploy from a branch → `main` → `/docs`. No Pages settings are changed automatically. The expected URL after a successful deployment is `https://alanshown.github.io/HOK-BetaStudio/`.
+The repository contains the three README variants, build documentation and real desktop screenshots. The separately maintained demonstration page and its code are intentionally excluded; this repository is not a GitHub Pages deployment source.
 
 ## Release gate
 

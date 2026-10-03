@@ -19,10 +19,10 @@
 
 Browse DB packages by hero and skin, inspect Unity and non-Unity entries, preview models and audio, and export selected assets in batches. A C# backend keeps parsing, previews and exports outside the interface process.
 
-**[Screenshot tour](docs/index.html) · [Releases](https://github.com/Alanshown/HOK-BetaStudio/releases) · [Issues](https://github.com/Alanshown/HOK-BetaStudio/issues)**
+**[Screenshots](#export) · [Releases](https://github.com/Alanshown/HOK-BetaStudio/releases) · [Issues](https://github.com/Alanshown/HOK-BetaStudio/issues)**
 
 > [!NOTE]
-> Version 1.2 is in development. Full portable and installer packages are being prepared privately; public binary distribution is pending artwork and third-party component review. The tour is a real-screenshot presentation, not an online DB parser.
+> Version 1.2 is in development. Full portable and installer packages are prepared privately; public binary distribution is pending artwork and third-party component review.
 
 ![Hero catalog in the desktop application](docs/images/01-catalog.png)
 
@@ -105,7 +105,7 @@ HOK-BetaStudio/
 ├── frontend/                # React + TypeScript + Three.js
 ├── vendor/Studio-HoK/        # upstream C# source and attribution
 ├── assets/                  # UI assets, catalog and license notices
-├── docs/                    # GitHub Pages tour and real screenshots
+├── docs/                    # documentation and real screenshots
 ├── tooling/                 # build, packaging and verification scripts
 ├── README.md
 ├── README.zh.md
@@ -136,7 +136,7 @@ powershell -ExecutionPolicy Bypass -File tooling/build-desktop.ps1 -OutputDirect
 powershell -ExecutionPolicy Bypass -File tooling/package-desktop.ps1 -BuildDirectory build/HOK-BetaStudio-1.2-win-x64
 ```
 
-The static tour needs no package installation. For GitHub Pages, select **Deploy from a branch → main → /docs**. Enable Pages yourself when ready; until then the repository HTML link is a source view, not a deployed site.
+The separately maintained demonstration page is intentionally excluded from this repository. The images above are real desktop screenshots.
 
 <a id="download"></a>
 ## Download and use

@@ -19,10 +19,10 @@
 
 按英雄和皮肤浏览 DB 包，检查 Unity 与非 Unity 文件，预览模型和音频，并批量导出所选资产。C# 后端将解析、预览和导出放在独立于界面的进程中运行。
 
-**[截图导览](docs/index.html) · [版本下载](https://github.com/Alanshown/HOK-BetaStudio/releases) · [问题反馈](https://github.com/Alanshown/HOK-BetaStudio/issues)**
+**[程序截图](#export) · [版本下载](https://github.com/Alanshown/HOK-BetaStudio/releases) · [问题反馈](https://github.com/Alanshown/HOK-BetaStudio/issues)**
 
 > [!NOTE]
-> 1.2 版本仍在开发中。完整便携包和安装包暂作非公开准备，公开发布需先完成素材与第三方组件分发检查。导览使用真实截图，不是在线 DB 解析器。
+> 1.2 版本仍在开发中。完整便携包和安装包已在本地准备好，公开发布需先完成素材与第三方组件分发检查。
 
 ![桌面程序的英雄目录](docs/images/01-catalog.png)
 
@@ -105,7 +105,7 @@ HOK-BetaStudio/
 ├── frontend/                # React + TypeScript + Three.js
 ├── vendor/Studio-HoK/        # upstream C# source and attribution
 ├── assets/                  # UI assets, catalog and license notices
-├── docs/                    # GitHub Pages tour and real screenshots
+├── docs/                    # documentation and real screenshots
 ├── tooling/                 # build, packaging and verification scripts
 ├── README.md
 ├── README.zh.md
@@ -136,7 +136,7 @@ powershell -ExecutionPolicy Bypass -File tooling/build-desktop.ps1 -OutputDirect
 powershell -ExecutionPolicy Bypass -File tooling/package-desktop.ps1 -BuildDirectory build/HOK-BetaStudio-1.2-win-x64
 ```
 
-静态导览无需安装依赖。GitHub Pages 选择 **Deploy from a branch → main → /docs**，准备好后自行启用；部署前仓库内 HTML 链接仅显示源码，不是已上线网站。
+演示页面单独维护，不纳入此仓库。上方图像均为真实桌面程序截图。
 
 <a id="download"></a>
 ## 下载与使用
