@@ -1,0 +1,804 @@
+{
+  "schemaVersion": 3,
+  "source": "Archive image filenames cross-checked against the trusted bundled image index SHA-256",
+  "heroes": [
+    {
+      "id": "105",
+      "name": "廉颇",
+      "portrait": "portraits/heroes/105_廉颇/105_廉颇.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "106",
+      "name": "小乔",
+      "portrait": "portraits/heroes/106_小乔/106_小乔.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "107",
+      "name": "赵云",
+      "portrait": "portraits/heroes/107_赵云/107_赵云.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "108",
+      "name": "墨子",
+      "portrait": "portraits/heroes/108_墨子/108_墨子.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "109",
+      "name": "妲己",
+      "portrait": "portraits/heroes/109_妲己/109_妲己.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "110",
+      "name": "嬴政",
+      "portrait": "portraits/heroes/110_嬴政/110_嬴政.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "111",
+      "name": "孙尚香",
+      "portrait": "portraits/heroes/111_孙尚香/111_孙尚香.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "112",
+      "name": "鲁班七号",
+      "portrait": "portraits/heroes/112_鲁班七号/112_鲁班七号.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "113",
+      "name": "庄周",
+      "portrait": "portraits/heroes/113_庄周/113_庄周.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "114",
+      "name": "刘禅",
+      "portrait": "portraits/heroes/114_刘禅/114_刘禅.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "115",
+      "name": "高渐离",
+      "portrait": "portraits/heroes/115_高渐离/115_高渐离.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "116",
+      "name": "阿轲",
+      "portrait": "portraits/heroes/116_阿轲/116_阿轲.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "117",
+      "name": "钟无艳",
+      "portrait": "portraits/heroes/117_钟无艳/117_钟无艳.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "118",
+      "name": "孙膑",
+      "portrait": "portraits/heroes/118_孙膑/118_孙膑.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "119",
+      "name": "扁鹊",
+      "portrait": "portraits/heroes/119_扁鹊/119_扁鹊.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "120",
+      "name": "白起",
+      "portrait": "portraits/heroes/120_白起/120_白起.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "121",
+      "name": "芈月",
+      "portrait": "portraits/heroes/121_芈月/121_芈月.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "123",
+      "name": "吕布",
+      "portrait": "portraits/heroes/123_吕布/123_吕布.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "124",
+      "name": "周瑜",
+      "portrait": "portraits/heroes/124_周瑜/124_周瑜.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "125",
+      "name": "元歌",
+      "portrait": "portraits/heroes/125_元歌/125_元歌.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "126",
+      "name": "夏侯惇",
+      "portrait": "portraits/heroes/126_夏侯惇/126_夏侯惇.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "127",
+      "name": "甄姬",
+      "portrait": "portraits/heroes/127_甄姬/127_甄姬.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "128",
+      "name": "曹操",
+      "portrait": "portraits/heroes/128_曹操/128_曹操.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "129",
+      "name": "典韦",
+      "portrait": "portraits/heroes/129_典韦/129_典韦.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "130",
+      "name": "宫本武藏",
+      "portrait": "portraits/heroes/130_宫本武藏/130_宫本武藏.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "131",
+      "name": "李白",
+      "portrait": "portraits/heroes/131_李白/131_李白.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "132",
+      "name": "马可波罗",
+      "portrait": "portraits/heroes/132_马可波罗/132_马可波罗.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "133",
+      "name": "狄仁杰",
+      "portrait": "portraits/heroes/133_狄仁杰/133_狄仁杰.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "134",
+      "name": "达摩",
+      "portrait": "portraits/heroes/134_达摩/134_达摩.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "135",
+      "name": "项羽",
+      "portrait": "portraits/heroes/135_项羽/135_项羽.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "136",
+      "name": "武则天",
+      "portrait": "portraits/heroes/136_武则天/136_武则天.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "137",
+      "name": "司马懿",
+      "portrait": "portraits/heroes/137_司马懿/137_司马懿.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "138",
+      "name": "王维",
+      "portrait": "portraits/heroes/138_王维/138_王维.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "139",
+      "name": "老夫子",
+      "portrait": "portraits/heroes/139_老夫子/139_老夫子.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "140",
+      "name": "关羽",
+      "portrait": "portraits/heroes/140_关羽/140_关羽.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "141",
+      "name": "貂蝉",
+      "portrait": "portraits/heroes/141_貂蝉/141_貂蝉.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "142",
+      "name": "安琪拉",
+      "portrait": "portraits/heroes/142_安琪拉/142_安琪拉.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "144",
+      "name": "程咬金",
+      "portrait": "portraits/heroes/144_程咬金/144_程咬金.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "146",
+      "name": "露娜",
+      "portrait": "portraits/heroes/146_露娜/146_露娜.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "148",
+      "name": "姜子牙",
+      "portrait": "portraits/heroes/148_姜子牙/148_姜子牙.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "149",
+      "name": "刘邦",
+      "portrait": "portraits/heroes/149_刘邦/149_刘邦.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "150",
+      "name": "韩信",
+      "portrait": "portraits/heroes/150_韩信/150_韩信.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "151",
+      "name": "孙权",
+      "portrait": "portraits/heroes/151_孙权/151_孙权.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "152",
+      "name": "王昭君",
+      "portrait": "portraits/heroes/152_王昭君/152_王昭君.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "153",
+      "name": "兰陵王",
+      "portrait": "portraits/heroes/153_兰陵王/153_兰陵王.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "154",
+      "name": "花木兰",
+      "portrait": "portraits/heroes/154_花木兰/154_花木兰.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "155",
+      "name": "艾琳",
+      "portrait": "portraits/heroes/155_艾琳/155_艾琳.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "156",
+      "name": "张良",
+      "portrait": "portraits/heroes/156_张良/156_张良.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "157",
+      "name": "不知火舞",
+      "portrait": "portraits/heroes/157_不知火舞/157_不知火舞.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "159",
+      "name": "朵莉亚",
+      "portrait": "portraits/heroes/159_朵莉亚/159_朵莉亚.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "162",
+      "name": "娜可露露",
+      "portrait": "portraits/heroes/162_娜可露露/162_娜可露露.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "163",
+      "name": "橘右京",
+      "portrait": "portraits/heroes/163_橘右京/163_橘右京.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "166",
+      "name": "亚瑟",
+      "portrait": "portraits/heroes/166_亚瑟/166_亚瑟.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "167",
+      "name": "孙悟空",
+      "portrait": "portraits/heroes/167_孙悟空/167_孙悟空.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "168",
+      "name": "牛魔",
+      "portrait": "portraits/heroes/168_牛魔/168_牛魔.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "169",
+      "name": "后羿",
+      "portrait": "portraits/heroes/169_后羿/169_后羿.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "170",
+      "name": "刘备",
+      "portrait": "portraits/heroes/170_刘备/170_刘备.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "171",
+      "name": "张飞",
+      "portrait": "portraits/heroes/171_张飞/171_张飞.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "172",
+      "name": "蚩奼",
+      "portrait": "portraits/heroes/172_蚩奼/172_蚩奼.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "173",
+      "name": "李元芳",
+      "portrait": "portraits/heroes/173_李元芳/173_李元芳.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "174",
+      "name": "虞姬",
+      "portrait": "portraits/heroes/174_虞姬/174_虞姬.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "175",
+      "name": "钟馗",
+      "portrait": "portraits/heroes/175_钟馗/175_钟馗.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "176",
+      "name": "杨玉环",
+      "portrait": "portraits/heroes/176_杨玉环/176_杨玉环.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "177",
+      "name": "苍",
+      "portrait": "portraits/heroes/177_苍/177_苍.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "178",
+      "name": "杨戬",
+      "portrait": "portraits/heroes/178_杨戬/178_杨戬.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "179",
+      "name": "女娲",
+      "portrait": "portraits/heroes/179_女娲/179_女娲.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "180",
+      "name": "哪吒",
+      "portrait": "portraits/heroes/180_哪吒/180_哪吒.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "182",
+      "name": "干将莫邪",
+      "portrait": "portraits/heroes/182_干将莫邪/182_干将莫邪.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "183",
+      "name": "雅典娜",
+      "portrait": "portraits/heroes/183_雅典娜/183_雅典娜.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "184",
+      "name": "蔡文姬",
+      "portrait": "portraits/heroes/184_蔡文姬/184_蔡文姬.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "186",
+      "name": "太乙真人",
+      "portrait": "portraits/heroes/186_太乙真人/186_太乙真人.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "187",
+      "name": "东皇太一",
+      "portrait": "portraits/heroes/187_东皇太一/187_东皇太一.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "188",
+      "name": "大禹",
+      "portrait": "portraits/heroes/188_大禹/188_大禹.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "189",
+      "name": "鬼谷子",
+      "portrait": "portraits/heroes/189_鬼谷子/189_鬼谷子.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "190",
+      "name": "诸葛亮",
+      "portrait": "portraits/heroes/190_诸葛亮/190_诸葛亮.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "191",
+      "name": "大乔",
+      "portrait": "portraits/heroes/191_大乔/191_大乔.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "192",
+      "name": "黄忠",
+      "portrait": "portraits/heroes/192_黄忠/192_黄忠.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "193",
+      "name": "铠",
+      "portrait": "portraits/heroes/193_铠/193_铠.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "194",
+      "name": "苏烈",
+      "portrait": "portraits/heroes/194_苏烈/194_苏烈.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "195",
+      "name": "百里玄策",
+      "portrait": "portraits/heroes/195_百里玄策/195_百里玄策.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "196",
+      "name": "百里守约",
+      "portrait": "portraits/heroes/196_百里守约/196_百里守约.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "197",
+      "name": "弈星",
+      "portrait": "portraits/heroes/197_弈星/197_弈星.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "198",
+      "name": "梦奇",
+      "portrait": "portraits/heroes/198_梦奇/198_梦奇.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "199",
+      "name": "公孙离",
+      "portrait": "portraits/heroes/199_公孙离/199_公孙离.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "312",
+      "name": "沈梦溪",
+      "portrait": "portraits/heroes/312_沈梦溪/312_沈梦溪.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "501",
+      "name": "明世隐",
+      "portrait": "portraits/heroes/501_明世隐/501_明世隐.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "502",
+      "name": "裴擒虎",
+      "portrait": "portraits/heroes/502_裴擒虎/502_裴擒虎.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "503",
+      "name": "狂铁",
+      "portrait": "portraits/heroes/503_狂铁/503_狂铁.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "504",
+      "name": "米莱狄",
+      "portrait": "portraits/heroes/504_米莱狄/504_米莱狄.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "505",
+      "name": "瑶",
+      "portrait": "portraits/heroes/505_瑶/505_瑶.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "506",
+      "name": "云中君",
+      "portrait": "portraits/heroes/506_云中君/506_云中君.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "507",
+      "name": "李信",
+      "portrait": "portraits/heroes/507_李信/507_李信.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "508",
+      "name": "伽罗",
+      "portrait": "portraits/heroes/508_伽罗/508_伽罗.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "509",
+      "name": "盾山",
+      "portrait": "portraits/heroes/509_盾山/509_盾山.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "510",
+      "name": "孙策",
+      "portrait": "portraits/heroes/510_孙策/510_孙策.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "511",
+      "name": "猪八戒",
+      "portrait": "portraits/heroes/511_猪八戒/511_猪八戒.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "513",
+      "name": "上官婉儿",
+      "portrait": "portraits/heroes/513_上官婉儿/513_上官婉儿.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "514",
+      "name": "亚连",
+      "portrait": "portraits/heroes/514_亚连/514_亚连.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "515",
+      "name": "嫦娥",
+      "portrait": "portraits/heroes/515_嫦娥/515_嫦娥.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "517",
+      "name": "大司命",
+      "portrait": "portraits/heroes/517_大司命/517_大司命.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "518",
+      "name": "马超",
+      "portrait": "portraits/heroes/518_马超/518_马超.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "519",
+      "name": "敖隐",
+      "portrait": "portraits/heroes/519_敖隐/519_敖隐.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "521",
+      "name": "海月",
+      "portrait": "portraits/heroes/521_海月/521_海月.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "522",
+      "name": "曜",
+      "portrait": "portraits/heroes/522_曜/522_曜.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "523",
+      "name": "西施",
+      "portrait": "portraits/heroes/523_西施/523_西施.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "524",
+      "name": "蒙犽",
+      "portrait": "portraits/heroes/524_蒙犽/524_蒙犽.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "525",
+      "name": "鲁班大师",
+      "portrait": "portraits/heroes/525_鲁班大师/525_鲁班大师.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "527",
+      "name": "蒙恬",
+      "portrait": "portraits/heroes/527_蒙恬/527_蒙恬.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "528",
+      "name": "澜",
+      "portrait": "portraits/heroes/528_澜/528_澜.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "529",
+      "name": "盘古",
+      "portrait": "portraits/heroes/529_盘古/529_盘古.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "531",
+      "name": "镜",
+      "portrait": "portraits/heroes/531_镜/531_镜.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "533",
+      "name": "阿古朵",
+      "portrait": "portraits/heroes/533_阿古朵/533_阿古朵.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "534",
+      "name": "桑启",
+      "portrait": "portraits/heroes/534_桑启/534_桑启.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "536",
+      "name": "夏洛特",
+      "portrait": "portraits/heroes/536_夏洛特/536_夏洛特.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "537",
+      "name": "司空震",
+      "portrait": "portraits/heroes/537_司空震/537_司空震.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "538",
+      "name": "云缨",
+      "portrait": "portraits/heroes/538_云缨/538_云缨.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "540",
+      "name": "金蝉",
+      "portrait": "portraits/heroes/540_金蝉/540_金蝉.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "542",
+      "name": "暃",
+      "portrait": "portraits/heroes/542_暃/542_暃.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "544",
+      "name": "赵怀真",
+      "portrait": "portraits/heroes/544_赵怀真/544_赵怀真.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "545",
+      "name": "莱西奥",
+      "portrait": "portraits/heroes/545_莱西奥/545_莱西奥.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "547",
+      "name": "卢雅那",
+      "portrait": "portraits/heroes/547_卢雅那/547_卢雅那.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "548",
+      "name": "戈娅",
+      "portrait": "portraits/heroes/548_戈娅/548_戈娅.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "549",
+      "name": "心魔六耳",
+      "portrait": "portraits/heroes/549_心魔六耳/549_心魔六耳.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "550",
+      "name": "空空儿",
+      "portrait": "portraits/heroes/550_空空儿/550_空空儿.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "558",
+      "name": "影",
+      "portrait": "portraits/heroes/558_影/558_影.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "563",
+      "name": "海诺",
+      "portrait": "portraits/heroes/563_海诺/563_海诺.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "564",
+      "name": "姬小满",
+      "portrait": "portraits/heroes/564_姬小满/564_姬小满.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "577",
+      "name": "少司缘",
+      "portrait": "portraits/heroes/577_少司缘/577_少司缘.png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "581",
+      "name": "元流之子(坦克)",
+      "portrait": "portraits/heroes/581_元流之子(坦克)/581_元流之子(坦克).png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "582",
+      "name": "元流之子(法师)",
+      "portrait": "portraits/heroes/582_元流之子(法师)/582_元流之子(法师).png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "583",
+      "name": "元流之子(刺客)",
+      "portrait": "portraits/heroes/583_元流之子(刺客)/583_元流之子(刺客).png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "584",
+      "name": "元流之子(射手)",
+      "portrait": "portraits/heroes/584_元流之子(射手)/584_元流之子(射手).png",
+      "source": "archive-image-filename"
+    },
+    {
+      "id": "585",
+      "name": "元流之子(辅助)",
+      "portrait": "portraits/heroes/585_元流之子(辅助)/585_元流之子(辅助).png",
+      "source": "archive-image-filename"
+    }
+  ]
+}

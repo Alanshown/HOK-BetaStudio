@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType></PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../Hok.Worker/ResourceAsset.cs" Link="ResourceAsset.cs" />
+    <Compile Include="../Hok.Worker/WwiseIndex.cs" Link="WwiseIndex.cs" />
+    <Compile Include="../Hok.Worker/AudioTools.cs" Link="AudioTools.cs" />
+    <Compile Include="../Hok.Worker/BankArchive.cs" Link="BankArchive.cs" />
+    <Compile Include="../Hok.Desktop/OwnedCache.cs" Link="OwnedCache.cs" />
+  </ItemGroup>
+</Project>

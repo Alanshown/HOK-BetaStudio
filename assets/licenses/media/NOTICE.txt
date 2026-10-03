@@ -1,0 +1,24 @@
+HOK BetaStudio media helpers
+
+vgmstream r2117 (Windows x64)
+https://github.com/vgmstream/vgmstream/releases/tag/r2117
+https://github.com/vgmstream/vgmstream/tree/r2117
+Downloaded vgmstream-win64.zip from this release. The CLI and its runtime DLLs
+are bundled unmodified. Copyright and third-party notices: vgmstream-COPYING.txt.
+
+FFmpeg 8.1.1 full build (Gyan, Windows x64), GPL version 3 or later
+https://www.gyan.dev/ffmpeg/builds/
+https://ffmpeg.org/releases/ffmpeg-8.1.1.tar.xz
+https://github.com/GyanD/codexffmpeg/releases/tag/8.1.1
+Copied unmodified from the user's installed Gyan.FFmpeg WinGet distribution.
+License: FFmpeg-GPLv3.txt. Run ffmpeg.exe -version for its build configuration.
+Redistributors must comply with GPL source-distribution obligations for the
+FFmpeg binary and its configured dependencies; a source URL alone is not a
+complete redistribution compliance package.
+
+Build setup: put vgmstream-cli.exe, the DLLs from its release archive, and
+ffmpeg.exe in .tools/media/runtime. tooling/build-desktop.ps1 copies this folder
+to worker/media and the licenses to assets/licenses/media.
+
+Decoding is performed locally. WEM export preserves source bytes; MP3 is an
+actual audio conversion. This program does not encode arbitrary audio to WEM.

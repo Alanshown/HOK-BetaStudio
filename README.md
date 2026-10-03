@@ -170,4 +170,3 @@ Based on Studio-HoK / AssetStudio readers. Preserve the [upstream MIT notice](ve
 The HOK crest-plus-text app icon is a generated project concept, not an official game logo. Honor of Kings names, characters, artwork and trademarks belong to their respective owners; this is an independent project. Screenshots illustrate the tool and do not grant rights to redistribute the depicted game content.
 
 Only inspect and export material you are authorized to use. Public binary release remains gated on game-art permissions, native FBX/FMOD/codec redistribution checks, and the complete corresponding-source obligations of bundled FFmpeg builds. No blanket license for those components is implied by this repository.
-

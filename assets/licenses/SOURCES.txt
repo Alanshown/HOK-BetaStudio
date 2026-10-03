@@ -1,0 +1,35 @@
+HOK Studio planning asset sources — 2026-10-03
+
+Generated images:
+Six final masters generated with the built-in imagegen tool.
+Original prompt records: ../generation-prompts.json.
+The HOK crest is a generated concept; it is not an official game logo file.
+No claim is made that generated imagery grants rights to third-party names or marks.
+
+User-provided assets:
+133 hero portraits from HOK_Studio_source/hok_assets.
+herolist.source.json copied from the user attachment.
+These are game-related materials; rights are not re-licensed by this delivery.
+Public redistribution requires the relevant rights review.
+
+Open-source UI icons:
+Lucide 0.468.0; exported from the existing approved prototype.
+ISC / derived Feather MIT. See Lucide-ISC-MIT.txt.
+Source: https://github.com/lucide-icons/lucide/tree/0.468.0
+
+Fonts:
+Lora and Figtree; copied with their OFL license files in ../fonts.
+Chinese text uses system font fallback; Microsoft fonts are not redistributed.
+
+Project-derived assets:
+Aurora CSS/static raster and semantic tokens derive from the approved local v2 design.
+No proprietary Anthropic font is bundled. Typography is an aesthetic interpretation.
+
+Software dependencies:
+The local development binary includes media helpers. See media/NOTICE.txt,
+media/vgmstream-COPYING.txt and media/FFmpeg-GPLv3.txt. Public redistribution,
+native FBX/FMOD/codec licensing and complete corresponding-source delivery
+remain release gates; this is not a blanket license for the bundled binary.
+
+Colored broom:
+Twemoji graphic, CC BY 4.0; see Twemoji-NOTICE.txt and Twemoji-CC-BY-4.0.txt.

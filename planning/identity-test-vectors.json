@@ -1,0 +1,104 @@
+{
+  "purpose": "Unit-test inputs, not workspace content",
+  "cases": [
+    {
+      "filename": "3200010704.db",
+      "valid": true,
+      "heroId": "107",
+      "skinId": "10704",
+      "shard": null
+    },
+    {
+      "filename": "3200010704_0.db",
+      "valid": true,
+      "heroId": "107",
+      "skinId": "10704",
+      "shard": "0"
+    },
+    {
+      "filename": "3200010704_12.DB",
+      "valid": true,
+      "heroId": "107",
+      "skinId": "10704",
+      "shard": "12"
+    },
+    {
+      "filename": "10704.db",
+      "valid": true,
+      "heroId": "107",
+      "skinId": "10704",
+      "shard": null
+    },
+    {
+      "filename": "3200010700.db",
+      "valid": true,
+      "heroId": "107",
+      "skinId": "10700",
+      "shard": null
+    },
+    {
+      "filename": "3200099904_1.db",
+      "valid": true,
+      "heroId": "999",
+      "skinId": "99904",
+      "shard": "1"
+    },
+    {
+      "filename": "3200000107_0.db",
+      "valid": true,
+      "heroId": "001",
+      "skinId": "00107",
+      "shard": "0"
+    },
+    {
+      "filename": "3200019110_0.db",
+      "valid": true,
+      "heroId": "191",
+      "skinId": "19110",
+      "shard": "0"
+    },
+    {
+      "filename": "00000.db",
+      "valid": true,
+      "heroId": "000",
+      "skinId": "00000",
+      "shard": null
+    },
+    {
+      "filename": "custom_resource_0.db",
+      "valid": false
+    },
+    {
+      "filename": "1234.db",
+      "valid": false
+    },
+    {
+      "filename": "3200010704_abc.db",
+      "valid": false
+    },
+    {
+      "filename": "3200010704_0.txt",
+      "valid": false
+    },
+    {
+      "filename": "3200010704.db.bak",
+      "valid": false
+    },
+    {
+      "filename": "10704_0_1.db",
+      "valid": false
+    },
+    {
+      "filename": "10704",
+      "valid": false
+    },
+    {
+      "filename": "10704.png",
+      "valid": false
+    },
+    {
+      "filename": "",
+      "valid": false
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+Broom artwork: Twemoji, copyright Twitter, Inc. and other contributors.
+Source: https://github.com/twitter/twemoji/blob/master/assets/svg/1f9f9.svg
+Licensed under Creative Commons Attribution 4.0 International.
+See Twemoji-CC-BY-4.0.txt. Artwork is unchanged; CSS animates it in the interface.

@@ -1,0 +1,16 @@
+.hero-grid, .skin-grid { perspective: 1000px; }
+.hero-card, .skin-card {
+  animation: portrait-domino 620ms cubic-bezier(.2,.7,.2,1) var(--delay,0ms) backwards;
+  transform-origin: 25% 90%;
+}
+.catalog-selection { padding: 26px; }
+.catalog-selection > p { margin-top: 12px; }
+.catalog-selection > button { margin-top: 24px; }
+@keyframes portrait-domino {
+  0% { opacity: 0; transform: translateY(30px) rotateX(22deg) rotateZ(-5deg) scale(.92); }
+  62% { opacity: 1; transform: translateY(-7px) rotateX(-3deg) rotateZ(1deg) scale(1.025); }
+  82% { transform: translateY(2px) rotateX(0deg) rotateZ(-.3deg) scale(.994); }
+  100% { opacity: 1; transform: none; }
+}
+.still *, .still *::before, .still *::after { animation: none !important; transition: none !important; }
+@media (prefers-reduced-motion: reduce) { .hero-card, .skin-card { animation: none; } }
