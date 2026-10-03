@@ -17,6 +17,10 @@
 
 <!-- README-I18N:END -->
 
+**[下载安装版](https://github.com/Alanshown/HOK-BetaStudio/releases/download/1.2/HOK-BetaStudio-1.2-rebuild-beta-win-x64-Setup.exe) · [下载便携 ZIP](https://github.com/Alanshown/HOK-BetaStudio/releases/download/1.2/HOK-BetaStudio-1.2-rebuild-beta-win-x64.zip)**
+
+Windows x64 · 1.2 预览版 · [安装与校验](docs/INSTALL.md#简体中文) · [MIT 许可证](LICENSE)
+
 按英雄和皮肤浏览 DB 包，检查 Unity 与非 Unity 文件，预览模型和音频，并批量导出所选资产。C# 后端将解析、预览和导出放在独立于界面的进程中运行。
 
 **[程序截图](#export) · [版本下载](https://github.com/Alanshown/HOK-BetaStudio/releases) · [问题反馈](https://github.com/Alanshown/HOK-BetaStudio/issues)**
@@ -138,9 +142,9 @@ powershell -ExecutionPolicy Bypass -File tooling/package-desktop.ps1 -BuildDirec
 <a id="download"></a>
 ## 下载与使用
 
-公开下载将在分发审核通过后出现在 [Releases 页面](https://github.com/Alanshown/HOK-BetaStudio/releases)。非公开草稿对普通访问者不可见。
+1.2 版本已在[发行页面](https://github.com/Alanshown/HOK-BetaStudio/releases/tag/1.2)公开提供。选择 Setup 安装程序或便携 ZIP；GitHub 自动生成的 **Source code** 是源码，不是可运行程序。参阅[安装、SHA-256 校验与故障排查](docs/INSTALL.md#简体中文)。
 
-发布后，解压**整个便携 ZIP**并运行 `HOK BetaStudio.exe`，或者使用 Windows 安装程序。不要将 EXE 与 `worker`、`ui`、`assets` 文件夹分开。自包含 .NET 包仍需要 WebView2 Runtime。目前程序包未进行代码签名。
+解压**整个便携 ZIP**并运行 `HOK BetaStudio.exe`，或者使用 Windows 安装程序。不要将 EXE 与 `worker`、`ui`、`assets` 文件夹分开。自包含 .NET 包仍需要 [Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/#download)，Setup 不会自动安装它。目前程序包未进行代码签名。
 
 打开包含主 DB、分片及相关文件的完整目录，依次选择英雄、皮肤、资产，再预览或导出。始终备份原始包，尤其在试用 Beta 重建时。
 
@@ -162,8 +166,8 @@ powershell -ExecutionPolicy Bypass -File tooling/package-desktop.ps1 -BuildDirec
 <a id="attribution"></a>
 ## 归属与分发
 
-基于 Studio-HoK／AssetStudio 读取器，保留[上游 MIT 声明](vendor/Studio-HoK/LICENSE)。第三方组件和界面素材分别遵循各自条款，见[素材说明](assets/licenses/SOURCES.txt)和[媒体组件说明](assets/licenses/media/NOTICE.txt)。
+HOK BetaStudio 原创代码采用 [MIT 许可证](LICENSE)。基于 Studio-HoK／AssetStudio 读取器，保留[上游 MIT 声明](vendor/Studio-HoK/LICENSE)。本许可证不重新授权第三方代码、二进制、游戏美术或商标。见[许可范围](docs/LICENSING.md)、[素材说明](assets/licenses/SOURCES.txt)和[媒体组件说明](assets/licenses/media/NOTICE.txt)。
 
 HOK 图形加文字的应用图标是生成的项目概念图，不是官方游戏图标。王者荣耀名称、角色、美术和商标属于相应权利人；本项目为独立项目。截图用于说明工具，不授予所展示游戏内容的再分发权。
 
-仅处理你有权使用的素材。公开二进制发行仍需核实游戏素材授权、原生 FBX／FMOD／编解码组件分发条件，以及所附 FFmpeg 构建完整对应源码的义务。仓库不对这些组件作统一授权。
+仅处理你有权使用的素材。公开发布不代表分发审核已通过：游戏素材授权、原生 FBX／FMOD／编解码组件分发条件，以及所附 FFmpeg 构建的对应源码义务，仍在[发行检查清单](docs/RELEASE-CHECKLIST.md)中标为待核实。仓库不对这些组件作统一授权。

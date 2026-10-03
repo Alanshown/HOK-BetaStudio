@@ -17,6 +17,10 @@
 
 <!-- README-I18N:END -->
 
+**[Download installer](https://github.com/Alanshown/HOK-BetaStudio/releases/download/1.2/HOK-BetaStudio-1.2-rebuild-beta-win-x64-Setup.exe) · [Download portable ZIP](https://github.com/Alanshown/HOK-BetaStudio/releases/download/1.2/HOK-BetaStudio-1.2-rebuild-beta-win-x64.zip)**
+
+Windows x64 · Version 1.2 preview · [Installation & checksums](docs/INSTALL.md) · [MIT license](LICENSE)
+
 Browse DB packages by hero and skin, inspect Unity and non-Unity entries, preview models and audio, and export selected assets in batches. A C# backend keeps parsing, previews and exports outside the interface process.
 
 **[Screenshots](#export) · [Releases](https://github.com/Alanshown/HOK-BetaStudio/releases) · [Issues](https://github.com/Alanshown/HOK-BetaStudio/issues)**
@@ -138,9 +142,9 @@ The separately maintained demonstration page is intentionally excluded from this
 <a id="download"></a>
 ## Download and use
 
-Public downloads will appear on the [Releases page](https://github.com/Alanshown/HOK-BetaStudio/releases) after distribution review. A private draft is not available to ordinary visitors.
+Version 1.2 is publicly available on the [release page](https://github.com/Alanshown/HOK-BetaStudio/releases/tag/1.2). Choose the Setup installer or portable ZIP; GitHub's automatic **Source code** downloads are not runnable applications. See [installation, SHA-256 verification and troubleshooting](docs/INSTALL.md).
 
-When published, extract the **whole portable ZIP** and run `HOK BetaStudio.exe`, or use the Windows installer. Do not move the EXE away from its `worker`, `ui` and `assets` folders. WebView2 Runtime is still required even with the self-contained .NET package. Packages are not currently code-signed.
+Extract the **whole portable ZIP** and run `HOK BetaStudio.exe`, or use the Windows installer. Do not move the EXE away from its `worker`, `ui` and `assets` folders. [Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/#download) is required even with the self-contained .NET package; Setup does not install it automatically. Packages are not currently code-signed.
 
 Open a folder containing the complete main DB, shards and related files. Choose a hero, a skin and an asset. Use the preview or export selection actions. Keep original packages backed up, especially when trying Beta rebuilding.
 
@@ -162,8 +166,8 @@ These are scoped regression results, not a claim of support for every game versi
 <a id="attribution"></a>
 ## Attribution and distribution
 
-Based on Studio-HoK / AssetStudio readers. Preserve the [upstream MIT notice](vendor/Studio-HoK/LICENSE). Third-party components and UI assets retain their own terms; see [asset notices](assets/licenses/SOURCES.txt) and [media notices](assets/licenses/media/NOTICE.txt).
+Original HOK BetaStudio code is available under the [MIT license](LICENSE). Based on Studio-HoK / AssetStudio readers; preserve the [upstream MIT notice](vendor/Studio-HoK/LICENSE). This license does not relicense third-party code, binaries, game artwork or trademarks. See [license scope](docs/LICENSING.md), [asset notices](assets/licenses/SOURCES.txt) and [media notices](assets/licenses/media/NOTICE.txt).
 
 The HOK crest-plus-text app icon is a generated project concept, not an official game logo. Honor of Kings names, characters, artwork and trademarks belong to their respective owners; this is an independent project. Screenshots illustrate the tool and do not grant rights to redistribute the depicted game content.
 
-Only inspect and export material you are authorized to use. Public binary release remains gated on game-art permissions, native FBX/FMOD/codec redistribution checks, and the complete corresponding-source obligations of bundled FFmpeg builds. No blanket license for those components is implied by this repository.
+Only inspect and export material you are authorized to use. Publication does not establish distribution clearance: game-art permissions, native FBX/FMOD/codec redistribution checks and FFmpeg corresponding-source obligations remain unverified in the [release checklist](docs/RELEASE-CHECKLIST.md). No blanket license for those components is implied by this repository.

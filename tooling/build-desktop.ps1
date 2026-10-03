@@ -32,4 +32,5 @@ foreach($folder in @('catalog','portraits','placeholders','icons','fonts','licen
 New-Item -ItemType Directory -Path (Join-Path $out 'ui/assets/fonts') -Force | Out-Null
 Copy-Item -Path (Join-Path $root 'assets/fonts/*') -Destination (Join-Path $out 'ui/assets/fonts') -Force
 Copy-Item -LiteralPath (Join-Path $root 'vendor/Studio-HoK/LICENSE') -Destination (Join-Path $out 'LICENSE-AssetStudio.txt') -Force
+Copy-Item -LiteralPath (Join-Path $root 'LICENSE') -Destination (Join-Path $out 'LICENSE-HOK-BetaStudio.txt') -Force
 Write-Output (Join-Path $out 'HOK BetaStudio.exe')

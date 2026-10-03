@@ -17,6 +17,10 @@
 
 <!-- README-I18N:END -->
 
+**[Tải bộ cài](https://github.com/Alanshown/HOK-BetaStudio/releases/download/1.2/HOK-BetaStudio-1.2-rebuild-beta-win-x64-Setup.exe) · [Tải ZIP portable](https://github.com/Alanshown/HOK-BetaStudio/releases/download/1.2/HOK-BetaStudio-1.2-rebuild-beta-win-x64.zip)**
+
+Windows x64 · Bản xem trước 1.2 · [Cài đặt và kiểm tra](docs/INSTALL.md#tiếng-việt) · [Giấy phép MIT](LICENSE)
+
 Duyệt gói DB theo tướng và trang phục, kiểm tra dữ liệu Unity lẫn dữ liệu khác, xem mô hình, nghe âm thanh và xuất hàng loạt. Backend C# tách việc phân tích, xem trước và xuất khỏi tiến trình giao diện.
 
 **[Ảnh chụp](#export) · [Bản phát hành](https://github.com/Alanshown/HOK-BetaStudio/releases) · [Báo lỗi](https://github.com/Alanshown/HOK-BetaStudio/issues)**
@@ -138,9 +142,9 @@ Trang trình diễn được duy trì riêng và không nằm trong kho này. C�
 <a id="download"></a>
 ## Tải xuống và sử dụng
 
-Bản tải công khai sẽ có trên [trang Releases](https://github.com/Alanshown/HOK-BetaStudio/releases) sau kiểm tra phân phối. Khách truy cập thông thường không thấy bản nháp riêng.
+Phiên bản 1.2 đã có công khai trên [trang phát hành](https://github.com/Alanshown/HOK-BetaStudio/releases/tag/1.2). Chọn bộ cài Setup hoặc ZIP portable; tệp **Source code** do GitHub tự tạo là mã nguồn, không phải ứng dụng chạy được. Xem [cài đặt, kiểm tra SHA-256 và khắc phục sự cố](docs/INSTALL.md#tiếng-việt).
 
-Khi được phát hành, giải nén **toàn bộ ZIP portable** rồi chạy `HOK BetaStudio.exe`, hoặc dùng bộ cài Windows. Không tách EXE khỏi các thư mục `worker`, `ui`, `assets`. Gói .NET self-contained vẫn cần WebView2 Runtime. Hiện các gói chưa được ký mã.
+Giải nén **toàn bộ ZIP portable** rồi chạy `HOK BetaStudio.exe`, hoặc dùng bộ cài Windows. Không tách EXE khỏi các thư mục `worker`, `ui`, `assets`. Gói .NET self-contained vẫn cần [Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/#download); Setup không tự cài runtime này. Hiện các gói chưa được ký mã.
 
 Mở thư mục chứa đầy đủ DB chính, các mảnh và tệp liên quan. Chọn tướng, trang phục, tài nguyên rồi xem trước hoặc xuất. Luôn sao lưu gói gốc, đặc biệt khi thử đóng gói lại Beta.
 
@@ -162,8 +166,8 @@ Mở thư mục chứa đầy đủ DB chính, các mảnh và tệp liên quan.
 <a id="attribution"></a>
 ## Ghi công và phân phối
 
-Dựa trên bộ đọc Studio-HoK / AssetStudio. Giữ [thông báo MIT thượng nguồn](vendor/Studio-HoK/LICENSE). Thành phần bên thứ ba và tài nguyên UI giữ điều khoản riêng; xem [thông báo tài nguyên](assets/licenses/SOURCES.txt) và [thông báo âm thanh](assets/licenses/media/NOTICE.txt).
+Mã gốc của HOK BetaStudio được cấp phép theo [MIT](LICENSE). Dựa trên bộ đọc Studio-HoK / AssetStudio; giữ [thông báo MIT thượng nguồn](vendor/Studio-HoK/LICENSE). Giấy phép này không cấp phép lại mã bên thứ ba, tệp nhị phân, hình ảnh game hay nhãn hiệu. Xem [phạm vi giấy phép](docs/LICENSING.md), [thông báo tài nguyên](assets/licenses/SOURCES.txt) và [thông báo âm thanh](assets/licenses/media/NOTICE.txt).
 
 Biểu tượng huy hiệu kèm chữ HOK là ý tưởng tạo cho dự án, không phải logo game chính thức. Tên Honor of Kings, nhân vật, hình ảnh và nhãn hiệu thuộc chủ sở hữu tương ứng; đây là dự án độc lập. Ảnh chụp minh họa công cụ không cấp quyền phân phối lại nội dung game trong ảnh.
 
-Chỉ xử lý tài nguyên bạn được phép sử dụng. Bản nhị phân công khai vẫn cần kiểm tra quyền hình ảnh, quyền phân phối FBX/FMOD/codec native và nghĩa vụ cung cấp mã nguồn tương ứng đầy đủ của FFmpeg đi kèm. Kho này không cấp giấy phép chung cho các thành phần đó.
+Chỉ xử lý tài nguyên bạn được phép sử dụng. Việc công khai không chứng minh đã hoàn tất kiểm tra phân phối: quyền hình ảnh, quyền phân phối FBX/FMOD/codec native và nghĩa vụ mã nguồn tương ứng của FFmpeg vẫn chưa được xác minh trong [danh sách kiểm tra phát hành](docs/RELEASE-CHECKLIST.md). Kho này không cấp giấy phép chung cho các thành phần đó.

@@ -1,0 +1,62 @@
+name: Bug report / 错误反馈 / Báo lỗi
+description: Report a reproducible import, preview, export or installation problem.
+title: "[Bug] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        English, 简体中文 and Tiếng Việt are welcome.
+        Do not upload private keys, game DBs or extracted game content without permission. Redact personal paths in logs.
+        请勿上传密钥或未经授权的游戏文件，日志请先脱敏。
+        Không đăng khóa hay nội dung game chưa được phép; ẩn thông tin riêng trong log.
+  - type: input
+    id: version
+    attributes:
+      label: Application version / 程序版本 / Phiên bản
+      placeholder: '1.2'
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version and architecture / 系统版本与架构
+      placeholder: Windows 11 x64
+    validations:
+      required: true
+  - type: dropdown
+    id: package
+    attributes:
+      label: Package / 程序来源 / Loại gói
+      options:
+        - Setup installer
+        - Portable ZIP
+        - Built from source
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce / 复现步骤 / Các bước tái hiện
+      description: Include import mode and relevant DB/shard filenames, not the files themselves.
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: Expected and actual result / 预期与实际结果
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Redacted logs or screenshots / 脱敏日志或截图
+      description: Logs may be found under %LOCALAPPDATA%\HokBetaStudio. Remove private data before posting.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting / 提交前确认
+      options:
+        - label: I checked the installation guide and existing issues.
+          required: true
+        - label: I removed private information and unauthorized game content from this report.
+          required: true

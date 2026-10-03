@@ -1,0 +1,2 @@
+a50b5647f4de56aca2e217f4349ccaf781dca5b4abe5b953e1a6b78462f4b223  HOK-BetaStudio-1.2-rebuild-beta-win-x64.zip
+9fc24c3305517459acbe728013e74422e7acc777b6485d9464bac19adfc4b81c  HOK-BetaStudio-1.2-rebuild-beta-win-x64-Setup.exe

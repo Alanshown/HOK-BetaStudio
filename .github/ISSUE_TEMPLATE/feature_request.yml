@@ -1,0 +1,23 @@
+name: Feature request / 功能建议 / Đề xuất
+description: Describe a useful workflow improvement.
+title: "[Feature] "
+body:
+  - type: markdown
+    attributes:
+      value: English, 简体中文 and Tiếng Việt are welcome. Please describe the problem before proposing a solution.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / 遇到的问题 / Vấn đề
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed improvement / 改进建议 / Đề xuất cải tiến
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives and constraints / 替代方案与限制

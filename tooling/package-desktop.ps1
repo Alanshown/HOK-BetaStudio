@@ -30,4 +30,4 @@ $hashes=@($zip,$setup) | ForEach-Object { $hash=Get-FileHash -LiteralPath $_ -Al
 [IO.File]::WriteAllLines((Join-Path $output 'SHA256SUMS.txt'),$hashes,[Text.UTF8Encoding]::new($false))
 Write-Output $zip
 Write-Output $setup
-Write-Output 'PRIVATE PREPARATION ONLY: publication is gated by docs/RELEASE-CHECKLIST.md'
+Write-Output 'LOCAL PACKAGING ONLY: no upload performed. Review docs/RELEASE-CHECKLIST.md before distributing this build.'

@@ -34,6 +34,10 @@ Do not use an empty public fixture directory to infer game compatibility. The so
 
 The repository contains the three README variants, build documentation and real desktop screenshots. The separately maintained demonstration page and its code are intentionally excluded; this repository is not a GitHub Pages deployment source.
 
-## Release gate
+## Source-only CI
 
-Full binary packages remain private/draft pending the checks listed in `docs/RELEASE-CHECKLIST.md`. A GitHub draft is not a public download. Do not set `draft: false` as part of packaging.
+The `Source checks` workflow builds the React frontend, C# desktop host and worker on Windows, then runs `Hok.Contracts.Tests`. It uses only public repository inputs; game DBs, artwork libraries, media executables and private native helpers are not required. It does not package, upload artifacts or publish releases. A passing run does not verify native export, game compatibility or installer behavior.
+
+## Release status and review
+
+Version 1.2 was published by the maintainer on 2026-10-03. See [installation and checksums](INSTALL.md). Publication does not close the unresolved distribution and clean-machine checks in [RELEASE-CHECKLIST.md](RELEASE-CHECKLIST.md). Future full packages must be reviewed before publication; packaging scripts do not publish automatically.
