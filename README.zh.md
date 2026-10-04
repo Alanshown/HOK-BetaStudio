@@ -17,9 +17,9 @@
 
 <!-- README-I18N:END -->
 
-Version **1.3** adds [silent resource synchronization](docs/RESOURCE-SYNC-1.3.md) and is available on the [1.3 Release page](https://github.com/Alanshown/HOK-BetaStudio/releases/tag/1.3). See the [release notes](docs/releases/1.3/RELEASE-NOTES.md).
+版本 **1.3** 新增[静默资源同步](docs/RESOURCE-SYNC-1.3.md)，已在 [1.3 发行页](https://github.com/Alanshown/HOK-BetaStudio/releases/tag/1.3)提供下载。查看[发行说明](docs/releases/1.3/RELEASE-NOTES.md)。
 
-**[Download installer 1.3](https://github.com/Alanshown/HOK-BetaStudio/releases/download/1.3/HOK-BetaStudio-1.3-win-x64-setup.exe) · [Download portable ZIP 1.3](https://github.com/Alanshown/HOK-BetaStudio/releases/download/1.3/HOK-BetaStudio-1.3-win-x64-portable.zip)**
+**[下载 1.3 安装版](https://github.com/Alanshown/HOK-BetaStudio/releases/download/1.3/HOK-BetaStudio-1.3-win-x64-setup.exe) · [下载 1.3 便携 ZIP](https://github.com/Alanshown/HOK-BetaStudio/releases/download/1.3/HOK-BetaStudio-1.3-win-x64-portable.zip)**
 
 Windows x64 · 源码版本 1.3 · [安装与校验](docs/INSTALL.md#简体中文) · [MIT 许可证](LICENSE)
 
