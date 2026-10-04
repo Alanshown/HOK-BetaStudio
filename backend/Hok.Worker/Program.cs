@@ -83,7 +83,7 @@ internal static class Program {
   }
   var capturedNames=new HashSet<string>(StringComparer.OrdinalIgnoreCase);
   foreach(var entry in manager.ContainerEntries){
-   capturedNames.Add(entry.Id);var detected=ResourceAsset.Detect(entry.Data,entry.Kind);
+   capturedNames.Add(Path.GetFullPath(entry.Source)+"|"+entry.Id.Replace('\\','/'));var detected=ResourceAsset.Detect(entry.Data,entry.Kind);
    AddResource(new($"entry:{Hash(entry.Source)}/{entry.Id}",entry.Id+"."+detected.extension,entry.Source,detected.type,detected.extension,entry.Data,Warning:entry.Warning));
   }
   foreach(var pair in manager.ResourceFiles.Where(p=>!capturedNames.Contains(p.Key))){

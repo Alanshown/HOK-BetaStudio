@@ -11,7 +11,7 @@ using static AssetStudio.ImportHelper;
 
 namespace AssetStudio
 {
-    public class AssetsManager
+    public partial class AssetsManager
     {
         public Game Game;
         public bool Silent = false;
@@ -21,7 +21,7 @@ namespace AssetStudio
         public CancellationTokenSource tokenSource = new CancellationTokenSource();
         public List<SerializedFile> assetsFileList = new List<SerializedFile>();
         public List<ContainerEntry> ContainerEntries { get; } = new List<ContainerEntry>();
-        public IEnumerable<KeyValuePair<string, BinaryReader>> ResourceFiles => resourceFileReaders;
+        public IEnumerable<KeyValuePair<string, BinaryReader>> ResourceFiles => scopedResourceReaders;
 
         internal Dictionary<string, int> assetsFileIndexCache = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         internal Dictionary<string, BinaryReader> resourceFileReaders = new Dictionary<string, BinaryReader>(StringComparer.OrdinalIgnoreCase);
@@ -29,7 +29,16 @@ namespace AssetStudio
         internal HashSet<string> ambiguousResourceNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         internal void RegisterResource(string name, BinaryReader reader, string source)
         {
-            scopedResourceReaders[source + "|" + name] = reader;
+            var key = ResourceKey(source, name);
+            if (scopedResourceReaders.TryGetValue(key, out var existing) && !ReferenceEquals(existing, reader))
+            {
+                // Keep both readers alive for cleanup, but never choose an alias collision.
+                ambiguousScopedResources.Add(key);
+                retiredResourceReaders.Add(reader);
+                Logger.Warning($"Ambiguous resource in container {source}: {name}");
+                return;
+            }
+            scopedResourceReaders[key] = reader;
             if (!resourceFileReaders.TryAdd(name, reader))
             {
                 ambiguousResourceNames.Add(name);
@@ -38,9 +47,9 @@ namespace AssetStudio
         }
         internal bool TryGetResource(SerializedFile file, string name, out BinaryReader reader)
         {
-            if (scopedResourceReaders.TryGetValue((file.originalPath ?? file.fullName) + "|" + name, out reader)) return true;
-            if (ambiguousResourceNames.Contains(name)) { reader = null; return false; }
-            return resourceFileReaders.TryGetValue(name, out reader);
+            var key = ResourceKey(file.originalPath ?? file.fullName, name);
+            if (ambiguousScopedResources.Contains(key)) throw new InvalidDataException($"Ambiguous resource in {file.originalPath ?? file.fullName}: {name}");
+            return scopedResourceReaders.TryGetValue(key, out reader);
         }
 
         internal List<string> importFiles = new List<string>();
@@ -102,7 +111,7 @@ namespace AssetStudio
             {
                 Logger.Verbose($"caching {file} path and name to filter out duplicates");
                 importFiles.Add(file);
-                importFilesHash.Add(Path.GetFileName(file));
+                importFilesHash.Add(Path.GetFullPath(file));
             }
 
             Progress.Reset();
@@ -209,32 +218,8 @@ namespace AssetStudio
                         if (Game.Type.IsHonorOfKings() && string.IsNullOrEmpty(sharedFileName))
                             continue;
 
-                        if (!importFilesHash.Contains(sharedFileName))
-                        {
-                            var sharedFilePath = Path.Combine(Path.GetDirectoryName(reader.FullPath), sharedFileName);
-                            if (!noexistFiles.Contains(sharedFilePath))
-                            {
-                                if (!File.Exists(sharedFilePath))
-                                {
-                                    var findFiles = Directory.GetFiles(Path.GetDirectoryName(reader.FullPath), sharedFileName, SearchOption.AllDirectories);
-                                    if (findFiles.Length > 0)
-                                    {
-                                        Logger.Verbose($"Found {findFiles.Length} matching files, picking first file {findFiles[0]} !!");
-                                        sharedFilePath = findFiles[0];
-                                    }
-                                }
-                                if (File.Exists(sharedFilePath))
-                                {
-                                    importFiles.Add(sharedFilePath);
-                                    importFilesHash.Add(sharedFileName);
-                                }
-                                else
-                                {
-                                    Logger.Verbose("Nothing was found, caching into non existant files to avoid repeated searching !!");
-                                    noexistFiles.Add(sharedFilePath);
-                                }
-                            }
-                        }
+                        var sharedFilePath = FindLocalFile(Path.GetDirectoryName(reader.FullPath), sharedFile.pathName ?? sharedFileName);
+                        if (sharedFilePath != null && importFilesHash.Add(sharedFilePath)) importFiles.Add(sharedFilePath);
                     }
                 }
                 catch (Exception e)
@@ -273,7 +258,7 @@ namespace AssetStudio
                 catch (Exception e)
                 {
                     Logger.Error($"Error while reading assets file {reader.FullPath} from {Path.GetFileName(originalPath)}", e);
-                    resourceFileReaders.TryAdd(reader.FileName, reader);
+                    RegisterResource(reader.FileName, reader, originalPath);
                 }
             }
             else
@@ -300,7 +285,7 @@ namespace AssetStudio
                     else
                     {
                         Logger.Verbose("Caching resource stream");
-                        resourceFileReaders.TryAdd(file.fileName, subReader); //TODO
+                        RegisterResource(file.fileName, subReader, originalPath ?? reader.FullPath);
                     }
                 }
             }
@@ -346,7 +331,7 @@ namespace AssetStudio
                             break;
                         case FileType.ResourceFile:
                             Logger.Verbose("Caching resource stream");
-                            resourceFileReaders.TryAdd(file.fileName, subReader); //TODO
+                            RegisterResource(file.fileName, subReader, reader.FullPath);
                             break;
                     }
                 }
@@ -379,12 +364,12 @@ namespace AssetStudio
                             if (!splitFiles.Contains(basePath))
                             {
                                 splitFiles.Add(basePath);
-                                importFilesHash.Add(baseName);
+                                importFilesHash.Add(Path.GetFullPath(Path.Combine(reader.FullPath + ".entries", basePath)));
                             }
                         }
                         else
                         {
-                            importFilesHash.Add(entry.Name);
+                            importFilesHash.Add(Path.GetFullPath(Path.Combine(reader.FullPath + ".entries", entry.FullName)));
                         }
                     }
 
@@ -553,7 +538,7 @@ namespace AssetStudio
                     else
                     {
                         Logger.Verbose("Caching resource stream");
-                        resourceFileReaders.TryAdd(file.fileName, cabReader); //TODO
+                        RegisterResource(file.fileName, cabReader, originalPath ?? reader.FullPath);
                     }
                 }
             }
@@ -790,7 +775,7 @@ namespace AssetStudio
                     else
                     {
                         Logger.Verbose("Caching resource stream");
-                        resourceFileReaders.TryAdd(file.fileName, cabReader); //TODO
+                        RegisterResource(file.fileName, cabReader, originalPath ?? reader.FullPath);
                     }
                 }
             }
@@ -837,6 +822,12 @@ namespace AssetStudio
                 resourceFileReader.Value.Close();
             }
             foreach (var resource in scopedResourceReaders.Values) resource.Close();
+            foreach (var resource in diskResourceReaders.Values) resource.Close();
+            foreach (var resource in retiredResourceReaders) resource.Close();
+            diskResourceReaders.Clear();
+            resolvedExternals.Clear();
+            retiredResourceReaders.Clear();
+            ambiguousScopedResources.Clear();
             scopedResourceReaders.Clear();
             ambiguousResourceNames.Clear();
             resourceFileReaders.Clear();
