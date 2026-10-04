@@ -1,0 +1,45 @@
+{
+  "date": "2026-10-04",
+  "scope": "Cross-directory external references and same-name resource stream isolation",
+  "baseline": {
+    "commit": "9a900736ffae713244759e3d340c0fddf024bae6",
+    "originalRegressionCases": 18,
+    "passed": 4,
+    "failed": 14,
+    "reproduced": [
+      "Basename-only dependency queue skips another directory's shared.assets.",
+      "Same-name standalone SerializedFiles cannot be resolved to their owning directory.",
+      "A warmed shared.resS cache returns the first directory's bytes for another directory.",
+      "Missing local targets can bind a foreign unique name; ambiguous descendants are guessed."
+    ]
+  },
+  "fixes": [
+    "Queue disk dependencies by full path and resolve explicit local paths before unique recursive matches.",
+    "Resolve PPtr using exact loaded identity, owner directory or owning container; do not use a global basename fallback.",
+    "Invalidate resolved-reference caches when the loaded-file set grows.",
+    "Cache disk streams by full path and memory streams by source container plus resource name.",
+    "Preserve source-qualified resource enumeration without duplicating QTS container rows.",
+    "Reject ambiguous resource aliases instead of choosing the first reader.",
+    "PPtr.Set distinguishes same-basename files using actual SerializedFile identity."
+  ],
+  "verification": {
+    "referenceIsolationChecks": 35,
+    "referenceIsolationFailures": 0,
+    "bothLoadOrders": true,
+    "diskReadAndExportBytesCompared": true,
+    "memoryContainerBytesCompared": true,
+    "explicitRelativePaths": true,
+    "missingAndAmbiguousReferences": true,
+    "incrementalLoadInvalidation": true,
+    "windowsDesktopBuild": true,
+    "discoveryCoreChecks": 33,
+    "workerIntegrationChecks": 10,
+    "desktopRegressionChecks": 20,
+    "rebuildBaselineChecks": 16,
+    "realSampleExports": {"Texture2D/png":108,"Mesh/obj":85,"AnimationClip/anim":12},
+    "sourceDbHashesUnchanged": true
+  },
+  "run": ".tools/dotnet/dotnet.exe run --project backend/Hok.Reference.Tests -- .",
+  "fixturePolicy": "Synthetic files are generated under .cache; no game data or binary dependencies are committed.",
+  "distribution": "This source PR does not replace previously packaged ZIP or Setup files."
+}

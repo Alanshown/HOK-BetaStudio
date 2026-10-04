@@ -33,27 +33,11 @@ namespace AssetStudio
         {
             if (needSearch)
             {
-                var resourceFileName = Path.GetFileName(path);
-                if (assetsFile.assetsManager.TryGetResource(assetsFile, resourceFileName, out reader))
+                var resourceFileName = Path.GetFileName(path.Replace('\\', '/'));
+                if (assetsFile.assetsManager.TryGetResource(assetsFile, path, out reader) ||
+                    assetsFile.assetsManager.TryGetResource(assetsFile, resourceFileName, out reader))
                 {
                     needSearch = false;
-                    return reader;
-                }
-                var assetsFileDirectory = Path.GetDirectoryName(assetsFile.originalPath ?? assetsFile.fullName);
-                var resourceFilePath = Path.Combine(assetsFileDirectory, resourceFileName);
-                if (!File.Exists(resourceFilePath))
-                {
-                    var findFiles = Directory.GetFiles(assetsFileDirectory, resourceFileName, SearchOption.AllDirectories);
-                    if (findFiles.Length > 0)
-                    {
-                        resourceFilePath = findFiles[0];
-                    }
-                }
-                if (File.Exists(resourceFilePath))
-                {
-                    needSearch = false;
-                    reader = new BinaryReader(File.OpenRead(resourceFilePath));
-                    assetsFile.assetsManager.resourceFileReaders.TryAdd(resourceFileName, reader);
                     return reader;
                 }
                 if (assetsFile.game.Type.IsHonorOfKings())
@@ -64,6 +48,14 @@ namespace AssetStudio
                         needSearch = false;
                         return reader;
                     }
+                }
+                var assetsFileDirectory = Path.GetDirectoryName(assetsFile.originalPath ?? assetsFile.fullName);
+                var resourceFilePath = AssetsManager.FindLocalFile(assetsFileDirectory, path);
+                if (resourceFilePath != null)
+                {
+                    reader = assetsFile.assetsManager.OpenDiskResource(resourceFilePath);
+                    needSearch = false;
+                    return reader;
                 }
                 throw new FileNotFoundException($"Can't find the resource file {resourceFileName}");
             }

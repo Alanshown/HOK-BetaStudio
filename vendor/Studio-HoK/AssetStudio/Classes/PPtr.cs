@@ -11,7 +11,6 @@ namespace AssetStudio
         public long m_PathID;
 
         private SerializedFile assetsFile;
-        private int index = -2; //-2 - Prepare, -1 - Missing
         
         public string Name => TryGet(out var obj) ? obj.Name : string.Empty;
 
@@ -48,27 +47,9 @@ namespace AssetStudio
 
             if (m_FileID > 0 && m_FileID - 1 < assetsFile.m_Externals.Count)
             {
-                var assetsManager = assetsFile.assetsManager;
-                var assetsFileList = assetsManager.assetsFileList;
-                var assetsFileIndexCache = assetsManager.assetsFileIndexCache;
-
-                if (index == -2)
-                {
-                    var m_External = assetsFile.m_Externals[m_FileID - 1];
-                    var name = m_External.fileName;
-                    // Basename alone is not a unique identity across loaded packages.
-                    var matches = assetsFileList.Select((file, at) => (file, at)).Where(x => x.file.fileName.Equals(name, StringComparison.OrdinalIgnoreCase)).ToArray();
-                    var local = matches.Where(x => (x.file.originalPath ?? x.file.fullName) == (assetsFile.originalPath ?? assetsFile.fullName)).ToArray();
-                    index = local.Length == 1 ? local[0].at : matches.Length == 1 ? matches[0].at : -1;
-                    if (matches.Length > 1 && local.Length != 1)
-                        Logger.Warning($"Ambiguous external SerializedFile {name} from {assetsFile.fullName}; reference {m_FileID}/{m_PathID} was not guessed.");
-                }
-
-                if (index >= 0)
-                {
-                    result = assetsFileList[index];
-                    return true;
-                }
+                // Resolve against the owner scope, not a basename or a cached list index.
+                result = assetsFile.assetsManager.ResolveExternal(assetsFile, assetsFile.m_Externals[m_FileID - 1]);
+                return result != null;
             }
 
             return false;
@@ -113,18 +94,19 @@ namespace AssetStudio
         public void Set(T m_Object)
         {
             var name = m_Object.assetsFile.fileName;
-            if (string.Equals(assetsFile.fileName, name, StringComparison.OrdinalIgnoreCase))
+            if (ReferenceEquals(assetsFile, m_Object.assetsFile))
             {
                 m_FileID = 0;
             }
             else
             {
-                m_FileID = assetsFile.m_Externals.FindIndex(x => string.Equals(x.fileName, name, StringComparison.OrdinalIgnoreCase));
+                m_FileID = assetsFile.m_Externals.FindIndex(x => ReferenceEquals(assetsFile.assetsManager.ResolveExternal(assetsFile, x), m_Object.assetsFile));
                 if (m_FileID == -1)
                 {
                     assetsFile.m_Externals.Add(new FileIdentifier
                     {
-                        fileName = m_Object.assetsFile.fileName
+                        fileName = name,
+                        pathName = m_Object.assetsFile.fullName
                     });
                     m_FileID = assetsFile.m_Externals.Count;
                 }
@@ -132,16 +114,6 @@ namespace AssetStudio
                 {
                     m_FileID += 1;
                 }
-            }
-
-            var assetsManager = assetsFile.assetsManager;
-            var assetsFileList = assetsManager.assetsFileList;
-            var assetsFileIndexCache = assetsManager.assetsFileIndexCache;
-
-            if (!assetsFileIndexCache.TryGetValue(name, out index))
-            {
-                index = assetsFileList.FindIndex(x => x.fileName.Equals(name, StringComparison.OrdinalIgnoreCase));
-                assetsFileIndexCache.Add(name, index);
             }
 
             m_PathID = m_Object.m_PathID;
