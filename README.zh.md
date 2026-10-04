@@ -3,7 +3,7 @@
   <h1>HOK BetaStudio</h1>
   <p>面向王者荣耀资产的桌面工作区。</p>
   <p>
-    <img alt="版本 1.2" src="https://img.shields.io/badge/version-1.2-147d72?style=flat-square">
+    <img alt="版本 1.3" src="https://img.shields.io/badge/version-1.3-147d72?style=flat-square">
     <img alt="Windows x64" src="https://img.shields.io/badge/platform-Windows_x64-357b9b?style=flat-square">
     <img alt="C# 与 React" src="https://img.shields.io/badge/C%23_%2B_React-desktop-667672?style=flat-square">
     <img alt="三种界面语言" src="https://img.shields.io/badge/UI-EN_%C2%B7_%E4%B8%AD%E6%96%87_%C2%B7_VI-147d72?style=flat-square">
@@ -16,6 +16,8 @@
 [English](./README.md) | **简体中文** | [Tiếng Việt](./README.vi.md)
 
 <!-- README-I18N:END -->
+
+当前源码版本 **1.3** 新增[静默资源同步](docs/RESOURCE-SYNC-1.3.md)。在 1.3 上传前，上方下载按钮仍指向已发布的 1.2。
 
 **[下载安装版](https://github.com/Alanshown/HOK-BetaStudio/releases/download/1.2/HOK-BetaStudio-1.2-rebuild-beta-win-x64-Setup.exe) · [下载便携 ZIP](https://github.com/Alanshown/HOK-BetaStudio/releases/download/1.2/HOK-BetaStudio-1.2-rebuild-beta-win-x64.zip)**
 
@@ -42,6 +44,7 @@ Windows x64 · 1.2 预览版 · [安装与校验](docs/INSTALL.md#简体中文) 
 ## 工作区与扫描
 
 - **导入前也可浏览。** 启动时显示本地英雄与皮肤目录，头像采用斜向多米诺入场动画，并尊重系统减少动态效果设置。
+- **资源同步（1.3）。** 头像通过索引中的 HTTPS 链接加载。启动时读取已生效本地索引，并静默抓取、校验官方目录；仅确认存在差异才显示动态“资源同步”按钮。点击后清空导入 DB 缓存与待重建替换记录，返回英雄首页，以斜向多米诺动画刷新头像。原始 DB 和已完成导出不动，网络失败保留原索引。
 - **打开文件、文件夹或直接拖入。** 递归扫描所有普通子目录，无写死的层数限制。为避免循环，跳过目录联接与符号链接；无权限路径会报告错误。
 - **依据文件名对位。** `3200010504.db` → 皮肤 `10504` → 英雄 `105`。`_0` 等分片后缀单独处理。无扩展名文件须通过 DB 签名检查。
 - **原皮规则。** `10500` 等以 `00` 结尾的皮肤使用英雄头像并显示“默认皮肤”。未知英雄与皮肤 ID 仍然显示，使用按 ID 固定的占位图。
@@ -99,6 +102,7 @@ HOK-BetaStudio/
 ├── backend/
 │   ├── Hok.Desktop/          # C# WPF + WebView2 host
 │   ├── Hok.Worker/           # parsing, preview, export
+│   ├── Hok.Catalog/          # remote index validation, staging and atomic sync
 │   ├── Hok.Contracts/        # filename identity and recursive scanner
 │   ├── Hok.Legacy/           # adapters to Studio-HoK readers
 │   ├── Hok.Rebuild/          # experimental replacement and rebuild
@@ -113,7 +117,7 @@ HOK-BetaStudio/
 └── README.vi.md
 ```
 
-依赖缓存、原生运行库包、游戏 DB、导出资产和构建产物不纳入源码仓库。游戏头像图库不作为源码素材包重新分发；完整目录展示需自行提供有权使用的素材。
+依赖缓存、原生运行库包、游戏 DB、导出资产和构建产物不纳入源码仓库。1.3 使用内置链接索引与在线头像，不再要求或打包静态游戏头像图库；未知 ID 和图片加载失败时使用本地占位图。
 
 <a id="build"></a>
 ## 构建与打包
@@ -128,13 +132,14 @@ npm ci --prefix tooling
 dotnet build backend/Hok.Desktop/Hok.Desktop.csproj -c Release
 dotnet build backend/Hok.Worker/Hok.Worker.csproj -c Release
 dotnet run --project backend/Hok.Contracts.Tests -c Release -- .
+dotnet run --project backend/Hok.Catalog.Tests -c Release -- .
 ```
 
 源码编译与完整桌面发行包是不同步骤。原生 FBX／FMOD／编解码组件、媒体工具、素材和打包目录说明见[构建输入](docs/BUILD.md)。不要把第三方二进制复制进 Git 仓库。
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File tooling/build-desktop.ps1 -OutputDirectory build/HOK-BetaStudio-1.2-win-x64
-powershell -ExecutionPolicy Bypass -File tooling/package-desktop.ps1 -BuildDirectory build/HOK-BetaStudio-1.2-win-x64
+powershell -ExecutionPolicy Bypass -File tooling/build-desktop.ps1 -OutputDirectory build/HOK-BetaStudio-1.3-win-x64
+powershell -ExecutionPolicy Bypass -File tooling/package-desktop.ps1 -BuildDirectory build/HOK-BetaStudio-1.3-win-x64
 ```
 
 演示页面单独维护，不纳入此仓库。上方图像均为真实桌面程序截图。
@@ -155,6 +160,7 @@ powershell -ExecutionPolicy Bypass -File tooling/package-desktop.ps1 -BuildDirec
 
 | 检查 | 已观察结果 |
 |---|---|
+| 资源索引／桌面同步（1.3） | 41 项索引检查与 22 项桌面检查，涵盖真实 CDN 图片、静默检测、缓存清理、三语与多米诺刷新 |
 | 命名识别与递归扫描 | 27 项检查；在 12 层目录中找到 14 个 DB／分片 |
 | 零修改重建基线 | 两组包共 16 项检查，基线输出逐字节一致 |
 | 替换工作进程 | 15 项检查，包含重复替换与未修改字节保留 |

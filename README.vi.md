@@ -3,7 +3,7 @@
   <h1>HOK BetaStudio</h1>
   <p>Không gian làm việc trên máy tính cho tài nguyên Honor of Kings.</p>
   <p>
-    <img alt="Phiên bản 1.2" src="https://img.shields.io/badge/version-1.2-147d72?style=flat-square">
+    <img alt="Phiên bản 1.3" src="https://img.shields.io/badge/version-1.3-147d72?style=flat-square">
     <img alt="Windows x64" src="https://img.shields.io/badge/platform-Windows_x64-357b9b?style=flat-square">
     <img alt="C# và React" src="https://img.shields.io/badge/C%23_%2B_React-desktop-667672?style=flat-square">
     <img alt="Ba ngôn ngữ giao diện" src="https://img.shields.io/badge/UI-EN_%C2%B7_%E4%B8%AD%E6%96%87_%C2%B7_VI-147d72?style=flat-square">
@@ -16,6 +16,8 @@
 [English](./README.md) | [简体中文](./README.zh.md) | **Tiếng Việt**
 
 <!-- README-I18N:END -->
+
+Mã nguồn phiên bản **1.3** bổ sung [đồng bộ tài nguyên ngầm](docs/RESOURCE-SYNC-1.3.md). Các nút tải phía trên vẫn trỏ tới bản 1.2 đã phát hành cho đến khi 1.3 được tải lên.
 
 **[Tải bộ cài](https://github.com/Alanshown/HOK-BetaStudio/releases/download/1.2/HOK-BetaStudio-1.2-rebuild-beta-win-x64-Setup.exe) · [Tải ZIP portable](https://github.com/Alanshown/HOK-BetaStudio/releases/download/1.2/HOK-BetaStudio-1.2-rebuild-beta-win-x64.zip)**
 
@@ -42,6 +44,7 @@ Duyệt gói DB theo tướng và trang phục, kiểm tra dữ liệu Unity l�
 ## Không gian làm việc và quét tệp
 
 - **Duyệt trước khi nhập.** Danh mục cục bộ hiển thị tướng và trang phục khi khởi động. Thẻ xuất hiện theo hiệu ứng domino chéo và tôn trọng tùy chọn giảm chuyển động của hệ thống.
+- **Đồng bộ tài nguyên (1.3).** Ảnh được tải từ URL HTTPS trong chỉ mục. Khi khởi động, ứng dụng đọc chỉ mục cục bộ đang áp dụng rồi âm thầm tải và kiểm tra danh mục chính thức. Chỉ khi xác nhận có khác biệt mới hiện nút **Đồng bộ tài nguyên** có hiệu ứng. Áp dụng cập nhật sẽ xóa bộ nhớ đệm DB đã nhập và thay thế đang chờ, trở về danh mục tướng rồi làm mới ảnh theo hiệu ứng domino chéo. DB gốc và tệp đã xuất được giữ nguyên; lỗi mạng không thay đổi chỉ mục đang dùng.
 - **Mở tệp, thư mục hoặc kéo thả.** Quét đệ quy các thư mục con thông thường, không giới hạn độ sâu cố định. Bỏ qua junction và liên kết tượng trưng để tránh vòng lặp; báo lỗi khi không có quyền truy cập.
 - **Đối chiếu theo tên.** `3200010504.db` → trang phục `10504` → tướng `105`. Hậu tố phân mảnh như `_0` được xử lý riêng. DB không có phần mở rộng phải vượt qua kiểm tra chữ ký.
 - **Trang phục mặc định.** ID kết thúc bằng `00`, như `10500`, dùng ảnh tướng và nhãn trang phục mặc định. ID tướng hoặc trang phục chưa biết vẫn hiển thị với ảnh thay thế ổn định theo ID.
@@ -99,6 +102,7 @@ HOK-BetaStudio/
 ├── backend/
 │   ├── Hok.Desktop/          # C# WPF + WebView2 host
 │   ├── Hok.Worker/           # parsing, preview, export
+│   ├── Hok.Catalog/          # remote index validation, staging and atomic sync
 │   ├── Hok.Contracts/        # filename identity and recursive scanner
 │   ├── Hok.Legacy/           # adapters to Studio-HoK readers
 │   ├── Hok.Rebuild/          # experimental replacement and rebuild
@@ -113,7 +117,7 @@ HOK-BetaStudio/
 └── README.vi.md
 ```
 
-Không đưa bộ nhớ đệm phụ thuộc, gói runtime native, DB game, tài nguyên xuất và sản phẩm biên dịch vào quản lý nguồn. Kho ảnh game không được phân phối lại như gói tài nguyên mã nguồn; cần tự cung cấp hình ảnh được phép sử dụng để hiển thị danh mục đầy đủ.
+Không đưa bộ nhớ đệm phụ thuộc, gói runtime native, DB game, tài nguyên xuất và sản phẩm biên dịch vào quản lý nguồn. Bản 1.3 dùng chỉ mục URL đi kèm và ảnh trực tuyến; không còn yêu cầu hoặc đóng gói thư viện ảnh game tĩnh. ID chưa biết và ảnh tải lỗi dùng ảnh thay thế cục bộ.
 
 <a id="build"></a>
 ## Biên dịch và đóng gói
@@ -128,13 +132,14 @@ npm ci --prefix tooling
 dotnet build backend/Hok.Desktop/Hok.Desktop.csproj -c Release
 dotnet build backend/Hok.Worker/Hok.Worker.csproj -c Release
 dotnet run --project backend/Hok.Contracts.Tests -c Release -- .
+dotnet run --project backend/Hok.Catalog.Tests -c Release -- .
 ```
 
 Biên dịch mã nguồn và tạo bản phân phối desktop đầy đủ là hai bước riêng. Xem [đầu vào xây dựng](docs/BUILD.md) về thư viện FBX/FMOD/codec native, công cụ âm thanh, hình ảnh và bố cục đóng gói. Không chép tệp nhị phân bên thứ ba vào Git.
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File tooling/build-desktop.ps1 -OutputDirectory build/HOK-BetaStudio-1.2-win-x64
-powershell -ExecutionPolicy Bypass -File tooling/package-desktop.ps1 -BuildDirectory build/HOK-BetaStudio-1.2-win-x64
+powershell -ExecutionPolicy Bypass -File tooling/build-desktop.ps1 -OutputDirectory build/HOK-BetaStudio-1.3-win-x64
+powershell -ExecutionPolicy Bypass -File tooling/package-desktop.ps1 -BuildDirectory build/HOK-BetaStudio-1.3-win-x64
 ```
 
 Trang trình diễn được duy trì riêng và không nằm trong kho này. Các hình ở trên là ảnh chụp ứng dụng desktop thực tế.
@@ -155,6 +160,7 @@ Mở thư mục chứa đầy đủ DB chính, các mảnh và tệp liên quan.
 
 | Kiểm tra | Kết quả quan sát |
 |---|---|
+| Chỉ mục / đồng bộ desktop (1.3) | 41 kiểm tra chỉ mục và 22 kiểm tra desktop; ảnh CDN thật, phát hiện ngầm, xóa bộ nhớ đệm, ba ngôn ngữ và làm mới domino |
 | Nhận dạng và quét đệ quy | 27 kiểm tra; tìm đủ 14 DB/mảnh qua 12 cấp thư mục |
 | Đóng gói lại không sửa đổi | 16 kiểm tra trên hai gói; đầu ra nền giống từng byte |
 | Worker thay thế | 15 kiểm tra, gồm thay lại cùng mục và bảo toàn byte không đổi |

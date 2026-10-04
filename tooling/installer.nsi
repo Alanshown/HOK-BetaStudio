@@ -1,15 +1,15 @@
 Unicode true
 !include "MUI2.nsh"
-Name "HOK BetaStudio 1.2"
+Name "HOK BetaStudio 1.3"
 OutFile "${OUTPUT_FILE}"
 InstallDir "$LOCALAPPDATA\Programs\HOK BetaStudio"
 RequestExecutionLevel user
 SetCompressor /SOLID lzma
 SetCompressorDictSize 32
-VIProductVersion "1.2.0.0"
+VIProductVersion "1.3.0.0"
 VIAddVersionKey "ProductName" "HOK BetaStudio"
 VIAddVersionKey "FileDescription" "HOK BetaStudio per-user installer"
-VIAddVersionKey "FileVersion" "1.2"
+VIAddVersionKey "FileVersion" "1.3"
 VIAddVersionKey "LegalCopyright" "See included third-party notices"
 !define MUI_ICON "${BUILD_DIR}\assets\icons\app\hok-studio.ico"
 !define MUI_UNICON "${BUILD_DIR}\assets\icons\app\hok-studio.ico"
@@ -44,7 +44,7 @@ Section "HOK BetaStudio"
   CreateShortcut "$SMPROGRAMS\HOK BetaStudio\HOK BetaStudio.lnk" "$INSTDIR\HOK BetaStudio.exe"
   CreateShortcut "$SMPROGRAMS\HOK BetaStudio\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\HOKBetaStudio" "DisplayName" "HOK BetaStudio"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\HOKBetaStudio" "DisplayVersion" "1.2"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\HOKBetaStudio" "DisplayVersion" "1.3"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\HOKBetaStudio" "UninstallString" '"$INSTDIR\Uninstall.exe"'
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\HOKBetaStudio" "InstallLocation" "$INSTDIR"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\HOKBetaStudio" "DisplayIcon" "$INSTDIR\HOK BetaStudio.exe"

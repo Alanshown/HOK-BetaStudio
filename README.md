@@ -3,7 +3,7 @@
   <h1>HOK BetaStudio</h1>
   <p>A desktop workspace for Honor of Kings assets.</p>
   <p>
-    <img alt="Version 1.2" src="https://img.shields.io/badge/version-1.2-147d72?style=flat-square">
+    <img alt="Version 1.3" src="https://img.shields.io/badge/version-1.3-147d72?style=flat-square">
     <img alt="Windows x64" src="https://img.shields.io/badge/platform-Windows_x64-357b9b?style=flat-square">
     <img alt="C# and React" src="https://img.shields.io/badge/C%23_%2B_React-desktop-667672?style=flat-square">
     <img alt="Three interface languages" src="https://img.shields.io/badge/UI-EN_%C2%B7_%E4%B8%AD%E6%96%87_%C2%B7_VI-147d72?style=flat-square">
@@ -16,6 +16,8 @@
 **English** | [简体中文](./README.zh.md) | [Tiếng Việt](./README.vi.md)
 
 <!-- README-I18N:END -->
+
+Source version **1.3** adds [silent resource synchronization](docs/RESOURCE-SYNC-1.3.md). The download buttons above still point to the published 1.2 release until 1.3 is uploaded.
 
 **[Download installer](https://github.com/Alanshown/HOK-BetaStudio/releases/download/1.2/HOK-BetaStudio-1.2-rebuild-beta-win-x64-Setup.exe) · [Download portable ZIP](https://github.com/Alanshown/HOK-BetaStudio/releases/download/1.2/HOK-BetaStudio-1.2-rebuild-beta-win-x64.zip)**
 
@@ -42,6 +44,7 @@ Browse DB packages by hero and skin, inspect Unity and non-Unity entries, previe
 ## Workspace and discovery
 
 - **Browse before importing.** The local catalog shows heroes and skins on startup. Hero and skin cards use a diagonal domino entrance, with reduced-motion accessibility support.
+- **Resource synchronization (1.3).** Portraits load from indexed HTTPS URLs. Startup reads the applied local index and silently fetches and validates the official catalogs. Only a validated difference reveals the animated **Resource sync** button. Applying it clears imported DB caches and staged replacements, returns to the hero catalog, and refreshes portraits with the diagonal domino transition. Original DBs and completed exports remain untouched; network failure retains the applied index.
 - **Open files, open a folder, or drag them in.** Ordinary subdirectories are scanned recursively without a hard-coded depth limit. Junctions and symbolic links are skipped to avoid loops; inaccessible paths are reported.
 - **Match by filename.** `3200010504.db` → skin `10504` → hero `105`. Numeric shard suffixes such as `_0` are handled separately. Recognized extensionless DBs are accepted after signature checking.
 - **Default skins.** IDs ending in `00`, such as `10500`, use the hero portrait and the label “Default skin”. Unknown hero and skin IDs remain visible with stable placeholders.
@@ -99,6 +102,7 @@ HOK-BetaStudio/
 ├── backend/
 │   ├── Hok.Desktop/          # C# WPF + WebView2 host
 │   ├── Hok.Worker/           # parsing, preview, export
+│   ├── Hok.Catalog/          # remote index validation, staging and atomic sync
 │   ├── Hok.Contracts/        # filename identity and recursive scanner
 │   ├── Hok.Legacy/           # adapters to Studio-HoK readers
 │   ├── Hok.Rebuild/          # experimental replacement and rebuild
@@ -113,7 +117,7 @@ HOK-BetaStudio/
 └── README.vi.md
 ```
 
-Dependency caches, native runtime packages, game DBs, exported assets and build products are excluded from source control. Game portrait libraries are not redistributed as a source asset pack. Provide your own authorized artwork for the full catalog presentation.
+Dependency caches, native runtime packages, game DBs, exported assets and build products are excluded from source control. Version 1.3 uses a bundled URL index and remote portraits; static game portrait libraries are no longer required or packaged. Unknown IDs and failed image requests use local placeholders.
 
 <a id="build"></a>
 ## Build and package
@@ -128,13 +132,14 @@ npm ci --prefix tooling
 dotnet build backend/Hok.Desktop/Hok.Desktop.csproj -c Release
 dotnet build backend/Hok.Worker/Hok.Worker.csproj -c Release
 dotnet run --project backend/Hok.Contracts.Tests -c Release -- .
+dotnet run --project backend/Hok.Catalog.Tests -c Release -- .
 ```
 
 Source compilation and a complete desktop distribution are separate steps. See [build inputs](docs/BUILD.md) for native FBX/FMOD/codec helpers, media tools, artwork and the current packaging layout. Do not copy third-party binaries into the Git repository.
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File tooling/build-desktop.ps1 -OutputDirectory build/HOK-BetaStudio-1.2-win-x64
-powershell -ExecutionPolicy Bypass -File tooling/package-desktop.ps1 -BuildDirectory build/HOK-BetaStudio-1.2-win-x64
+powershell -ExecutionPolicy Bypass -File tooling/build-desktop.ps1 -OutputDirectory build/HOK-BetaStudio-1.3-win-x64
+powershell -ExecutionPolicy Bypass -File tooling/package-desktop.ps1 -BuildDirectory build/HOK-BetaStudio-1.3-win-x64
 ```
 
 The separately maintained demonstration page is intentionally excluded from this repository. The images above are real desktop screenshots.
@@ -155,6 +160,7 @@ The screenshots are captured from the packaged desktop application using local `
 
 | Check | Observed result |
 |---|---|
+| Resource index / desktop synchronization (1.3) | 41 index checks and 22 desktop checks; actual CDN images, silent detection, cache cleanup, three languages and domino refresh |
 | Identity and recursive scanner | 27 checks; 14 DB/shard files found through 12 nested levels |
 | Zero-change rebuild baseline | 16 checks across both packages; byte-identical baseline output |
 | Replacement worker | 15 checks, including repeat replacement and untouched-byte preservation |
