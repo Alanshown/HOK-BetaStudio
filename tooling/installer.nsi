@@ -1,16 +1,20 @@
 Unicode true
-!include "MUI2.nsh"
-!include "installer-paths.nsh"
-Name "HOK BetaStudio 1.3"
-OutFile "${OUTPUT_FILE}"
-InstallDir "$LOCALAPPDATA\Programs\HOK BetaStudio"
-RequestExecutionLevel user
 SetCompressor /SOLID lzma
 SetCompressorDictSize 32
-VIProductVersion "1.3.0.2"
+!include "MUI2.nsh"
+!include "installer-paths.nsh"
+!ifndef HOK_SHORTCUT_DIR
+!define HOK_SHORTCUT_DIR "HOK BetaStudio"
+!endif
+Name "HOK BetaStudio 1.3"
+OutFile "${OUTPUT_FILE}"
+; Empty lets .onInit distinguish an explicit /D= override from the default.
+InstallDir ""
+RequestExecutionLevel user
+VIProductVersion "1.3.0.3"
 VIAddVersionKey "ProductName" "HOK BetaStudio"
 VIAddVersionKey "FileDescription" "HOK BetaStudio per-user installer"
-VIAddVersionKey "FileVersion" "1.3.0.2"
+VIAddVersionKey "FileVersion" "1.3.0.3"
 VIAddVersionKey "LegalCopyright" "See included third-party notices"
 !define MUI_ICON "${BUILD_DIR}\assets\icons\app\hok-studio.ico"
 !define MUI_UNICON "${BUILD_DIR}\assets\icons\app\hok-studio.ico"
@@ -25,6 +29,10 @@ VIAddVersionKey "LegalCopyright" "See included third-party notices"
 !insertmacro MUI_LANGUAGE "SimpChinese"
 !insertmacro MUI_LANGUAGE "Vietnamese"
 
+LangString InstallFileLocked ${LANG_ENGLISH} "An installed file is in use or cannot be updated:$\r$\n$InstallConflict$\r$\nClose HOK BetaStudio and its preview/export tasks, then retry. No files have been replaced."
+LangString InstallFileLocked ${LANG_SIMPCHINESE} "已安装文件正在使用或无法更新：$\r$\n$InstallConflict$\r$\n请关闭 HOK BetaStudio 及其预览/导出任务后重试。尚未覆盖任何文件。"
+LangString InstallFileLocked ${LANG_VIETNAMESE} "Tệp đang được sử dụng hoặc không thể cập nhật:$\r$\n$InstallConflict$\r$\nĐóng HOK BetaStudio và các tác vụ xem trước/xuất rồi thử lại. Chưa ghi đè tệp nào."
+
 LangString InstallPathInvalid ${LANG_ENGLISH} "Choose a valid application folder, not a drive root or a file."
 LangString InstallPathInvalid ${LANG_SIMPCHINESE} "请选择有效的程序文件夹，不要直接选择磁盘根目录或文件。"
 LangString InstallPathInvalid ${LANG_VIETNAMESE} "Chọn thư mục ứng dụng hợp lệ, không chọn thư mục gốc ổ đĩa hoặc tệp."
@@ -38,6 +46,14 @@ LangString InstallPathNotWritable ${LANG_VIETNAMESE} "Người dùng hiện tạ
 Function .onInit
   SetShellVarContext current
   SetRegView 64
+  Call FindRegisteredInstallation
+  ${If} $INSTDIR == ""
+    ${If} $RegisteredInstallDir != ""
+      StrCpy $INSTDIR $RegisteredInstallDir
+    ${Else}
+      StrCpy $INSTDIR "$LOCALAPPDATA\Programs\HOK BetaStudio"
+    ${EndIf}
+  ${EndIf}
 FunctionEnd
 
 ; Do not reject existing directories in .onVerifyInstDir: NSIS also uses
@@ -47,6 +63,7 @@ Function VerifyInstallDirectory
   StrCmp $InstallPathError 0 done
   StrCmp $InstallPathError 2 conflict
   StrCmp $InstallPathError 3 not_writable
+  StrCmp $InstallPathError 4 locked
   MessageBox MB_OK|MB_ICONEXCLAMATION "$(InstallPathInvalid)" /SD IDOK
   Goto rejected
   conflict:
@@ -54,6 +71,9 @@ Function VerifyInstallDirectory
   Goto rejected
   not_writable:
   MessageBox MB_OK|MB_ICONEXCLAMATION "$(InstallPathNotWritable)" /SD IDOK
+  Goto rejected
+  locked:
+  MessageBox MB_OK|MB_ICONEXCLAMATION "$(InstallFileLocked)" /SD IDOK
   rejected:
   SetErrorLevel $InstallPathError
   Abort
@@ -64,18 +84,27 @@ Section "HOK BetaStudio"
   ; Also validate silent /D installs and changes since leaving the page.
   Call VerifyInstallDirectory
   SetOutPath "$INSTDIR"
+  SetOverwrite on
+  ClearErrors
   File /r "${BUILD_DIR}\*.*"
+  IfErrors extraction_failed
   WriteUninstaller "$INSTDIR\Uninstall.exe"
-  CreateDirectory "$SMPROGRAMS\HOK BetaStudio"
-  CreateShortcut "$SMPROGRAMS\HOK BetaStudio\HOK BetaStudio.lnk" "$INSTDIR\HOK BetaStudio.exe"
-  CreateShortcut "$SMPROGRAMS\HOK BetaStudio\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\HOKBetaStudio" "DisplayName" "HOK BetaStudio"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\HOKBetaStudio" "DisplayVersion" "1.3"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\HOKBetaStudio" "UninstallString" '"$INSTDIR\Uninstall.exe"'
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\HOKBetaStudio" "InstallLocation" "$INSTDIR"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\HOKBetaStudio" "DisplayIcon" "$INSTDIR\HOK BetaStudio.exe"
-  WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\HOKBetaStudio" "NoModify" 1
-  WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\HOKBetaStudio" "NoRepair" 1
+  IfErrors extraction_failed
+  CreateDirectory "$SMPROGRAMS\${HOK_SHORTCUT_DIR}"
+  CreateShortcut "$SMPROGRAMS\${HOK_SHORTCUT_DIR}\HOK BetaStudio.lnk" "$INSTDIR\HOK BetaStudio.exe"
+  CreateShortcut "$SMPROGRAMS\${HOK_SHORTCUT_DIR}\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
+  WriteRegStr HKCU "${HOK_UNINSTALL_KEY}" "DisplayName" "HOK BetaStudio"
+  WriteRegStr HKCU "${HOK_UNINSTALL_KEY}" "DisplayVersion" "1.3"
+  WriteRegStr HKCU "${HOK_UNINSTALL_KEY}" "UninstallString" '"$INSTDIR\Uninstall.exe"'
+  WriteRegStr HKCU "${HOK_UNINSTALL_KEY}" "InstallLocation" "$INSTDIR"
+  WriteRegStr HKCU "${HOK_UNINSTALL_KEY}" "DisplayIcon" "$INSTDIR\HOK BetaStudio.exe"
+  WriteRegDWORD HKCU "${HOK_UNINSTALL_KEY}" "NoModify" 1
+  WriteRegDWORD HKCU "${HOK_UNINSTALL_KEY}" "NoRepair" 1
+  Goto installed
+  extraction_failed:
+  SetErrorLevel 5
+  Abort
+  installed:
 SectionEnd
 
 Section "Uninstall"
@@ -84,8 +113,12 @@ Section "Uninstall"
   !include "${UNINSTALL_MANIFEST}"
   Delete "$INSTDIR\Uninstall.exe"
   RMDir "$INSTDIR"
-  Delete "$SMPROGRAMS\HOK BetaStudio\HOK BetaStudio.lnk"
-  Delete "$SMPROGRAMS\HOK BetaStudio\Uninstall.lnk"
-  RMDir "$SMPROGRAMS\HOK BetaStudio"
-  DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\HOKBetaStudio"
+  ; Uninstalling an older copy must not erase a newer location's registration.
+  ReadRegStr $0 HKCU "${HOK_UNINSTALL_KEY}" "InstallLocation"
+  StrCmp $0 $INSTDIR 0 done
+  Delete "$SMPROGRAMS\${HOK_SHORTCUT_DIR}\HOK BetaStudio.lnk"
+  Delete "$SMPROGRAMS\${HOK_SHORTCUT_DIR}\Uninstall.lnk"
+  RMDir "$SMPROGRAMS\${HOK_SHORTCUT_DIR}"
+  DeleteRegKey HKCU "${HOK_UNINSTALL_KEY}"
+  done:
 SectionEnd

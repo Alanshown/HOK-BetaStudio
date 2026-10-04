@@ -47,8 +47,20 @@ namespace AssetStudio
 
             if (m_FileID > 0 && m_FileID - 1 < assetsFile.m_Externals.Count)
             {
+                var external = assetsFile.m_Externals[m_FileID - 1];
+                // HOK's repacked QTS SerializedFiles retain GUID-only external
+                // slots while referenced objects are embedded in the same DB.
+                // Prefer local objects, then a unique same-source target;
+                // never borrow a PathID from a different DB.
+                if (assetsFile.game.Type.IsHonorOfKings()
+                    && string.IsNullOrEmpty(external.pathName)
+                    && string.IsNullOrEmpty(external.fileName))
+                {
+                    result = assetsFile.assetsManager.ResolveHokObjectReference(assetsFile, m_PathID);
+                    return result != null;
+                }
                 // Resolve against the owner scope, not a basename or a cached list index.
-                result = assetsFile.assetsManager.ResolveExternal(assetsFile, assetsFile.m_Externals[m_FileID - 1]);
+                result = assetsFile.assetsManager.ResolveExternal(assetsFile, external);
                 return result != null;
             }
 

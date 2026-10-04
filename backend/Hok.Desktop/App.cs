@@ -150,7 +150,7 @@ internal sealed class MainWindow:Window {
      var response=await previewWorker.Call(method,p);if(ticket!=previewEpoch||version!=generation)throw new IOException("Preview cancelled or workspace changed");
      if(method is "dump" or "bank")return response;
      var file=response.GetProperty("file").GetString()!;if(Path.GetFileName(file)!=file)throw new IOException("Invalid preview path");
-     return new{url="https://preview.hok.local/"+Uri.EscapeDataString(file),kind=response.GetProperty("kind").GetString()};
+     return new{url="https://preview.hok.local/"+Uri.EscapeDataString(file),kind=response.GetProperty("kind").GetString(),warnings=response.TryGetProperty("warnings",out var warnings)?warnings.Clone():(JsonElement?)null,animation=response.TryGetProperty("animation",out var animation)?animation.GetString():null};
     }finally{previewLane.Release();}
    }
    case "export":{

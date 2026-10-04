@@ -26,6 +26,8 @@ Media versions and source URLs are in `assets/licenses/media/NOTICE.txt`. Native
 
 ## Test scope
 
+The 1.3.0.3 source update adds installer upgrade detection, HOK dense animation decoding, and reference-linked animation previews. See [asset coverage and known limitations](ASSET-COVERAGE-1.3.0.3.json) for fixture counts and reproducible commands. Original-object/raw export and semantic conversion are different guarantees: missing external image streams and unsupported particle simulation are reported, not fabricated. Build number 1.3.0.3 does not imply that the existing 1.3 Release attachments have been replaced.
+
 `Hok.Contracts.Tests` runs without game DBs and uses `planning/identity-test-vectors.json`. `Hok.Catalog.Tests` validates the 1.3 index normalization, staging, atomic application, offline behavior and recovery without network access by default. Add `--live` after the project-root argument to check the official endpoints. The local fixture tests for media and rebuilding need the corresponding DB directories and, for some scripts, reports produced by earlier fixture tests. Absolute-path reports are not uploaded. Review each script's input requirements before running it.
 
 ```powershell

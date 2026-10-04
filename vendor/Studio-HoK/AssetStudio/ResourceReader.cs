@@ -68,25 +68,36 @@ namespace AssetStudio
         public byte[] GetData()
         {
             var binaryReader = GetReader();
+            ValidateRange(binaryReader);
             binaryReader.BaseStream.Position = offset;
-            return binaryReader.ReadBytes((int)size);
+            var bytes = binaryReader.ReadBytes((int)size);
+            if (bytes.Length != size) throw new EndOfStreamException("Resource stream was truncated while reading.");
+            return bytes;
         }
 
         public void GetData(byte[] buff)
         {
-            var binaryReader = GetReader();
-            binaryReader.BaseStream.Position = offset;
-            binaryReader.Read(buff, 0, (int)size);
+            if (buff == null || buff.LongLength < size) throw new System.ArgumentException("Resource output buffer is too small.");
+            var bytes = GetData();
+            System.Buffer.BlockCopy(bytes, 0, buff, 0, bytes.Length);
         }
 
         public void WriteData(string path)
         {
             var binaryReader = GetReader();
+            ValidateRange(binaryReader);
             binaryReader.BaseStream.Position = offset;
-            using (var writer = File.OpenWrite(path))
+            using (var writer = File.Create(path))
             {
                 binaryReader.BaseStream.CopyTo(writer, size);
+                if (writer.Length != size) throw new EndOfStreamException("Resource stream was truncated while exporting.");
             }
+        }
+
+        private void ValidateRange(BinaryReader binaryReader)
+        {
+            if (offset < 0 || size < 0 || size > int.MaxValue || offset > binaryReader.BaseStream.Length - size)
+                throw new InvalidDataException($"Resource range is outside its source: offset={offset}, bytes={size}, sourceBytes={binaryReader.BaseStream.Length}.");
         }
     }
 }

@@ -130,5 +130,14 @@
   "parseNotAttempted": "Chưa thử phân tích",
   "rawLog": "Các dòng nhật ký gần đây",
   "unknown": "Chưa xác định",
-  "unknownFiles": "Tệp DB chưa xác định"
+  "unknownFiles": "Tệp DB chưa xác định",
+  "rawFallback": "Chuyển đổi chưa hoàn tất; đã giữ dữ liệu gốc",
+  "animationPlaying": "Tự động phát hoạt ảnh",
+  "animationVariants": "Nhiều mô hình/LOD liên quan dùng clip này. Hiển thị phiên bản có nhiều chi tiết nhất để tránh chồng lấn.",
+  "animationNoTracks": "Clip không có kênh biến đổi mô hình được hỗ trợ. Không mô phỏng phát giả.",
+  "animationTextures": "Thiếu hoặc không giải mã được một số ảnh liên kết; bản xem trước vật liệu chưa đầy đủ.",
+  "animationProperties": "Clip có thuộc tính tùy chỉnh hoặc kênh thay đối tượng. Chỉ phát các kênh mô hình/xương được hỗ trợ.",
+  "animationIncomplete": "Bản xem trước kết hợp còn hạn chế",
+  "animationParticles": "Đã tìm thấy hiệu ứng hạt liên quan, nhưng trình xem chưa tái hiện mô phỏng hạt Unity và shader tùy chỉnh.",
+  "animationNoModel": "Không tìm thấy mô hình liên quan đã xác minh; không thay bằng mô hình khác. Vẫn có thể xuất hoạt ảnh gốc."
 }

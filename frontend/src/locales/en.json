@@ -130,5 +130,14 @@
   "parseNotAttempted": "Parsing not attempted",
   "rawLog": "Recent log lines",
   "unknown": "Unknown",
-  "unknownFiles": "Unknown DB files"
+  "unknownFiles": "Unknown DB files",
+  "rawFallback": "Conversion incomplete; original data preserved",
+  "animationPlaying": "Animation auto-play",
+  "animationVariants": "Several related models/LODs use this clip. The most detailed linked instance is shown to avoid overlapping models.",
+  "animationNoTracks": "This clip has no model-transform tracks supported by this viewer. Playback is not simulated.",
+  "animationTextures": "Some linked textures are missing or could not be decoded; material preview is incomplete.",
+  "animationProperties": "This clip includes custom property or object-swap tracks. Only supported model/skeleton tracks are played.",
+  "animationIncomplete": "Combined preview has limitations",
+  "animationParticles": "Related particles were found, but Unity particle simulation and custom shaders are not yet reproduced by this viewer.",
+  "animationNoModel": "No verified related model was found; unrelated models are never substituted. Original animation export remains available."
 }

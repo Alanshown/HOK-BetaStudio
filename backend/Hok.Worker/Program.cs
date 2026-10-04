@@ -66,7 +66,7 @@ internal static class Program {
     var id=$"{prefix}:{meta.m_PathID}";
     if(obj is not null){
      Objects.Add(id,obj);
-     Rows.Add(new(id,string.IsNullOrWhiteSpace(obj.Name)?$"{type} #{meta.m_PathID}":obj.Name,type,meta.m_PathID.ToString(),file.fullName,meta.byteSize.ToString(),Exporters.Formats(obj),obj switch{Texture2D or Sprite=>"image",Mesh=>"model",AudioClip=>"audio",_=>"data"},meta.classID,status,warning,parse?.ConsumedBytes,parse?.RemainingBytes));
+     Rows.Add(new(id,string.IsNullOrWhiteSpace(obj.Name)?$"{type} #{meta.m_PathID}":obj.Name,type,meta.m_PathID.ToString(),file.fullName,meta.byteSize.ToString(),Exporters.Formats(obj),obj switch{Texture2D or Sprite=>"image",Mesh=>"model",AnimationClip=>"animation",AudioClip=>"audio",_=>"data"},meta.classID,status,warning,parse?.ConsumedBytes,parse?.RemainingBytes));
     }else{
      byte[] bytes=[];bool rawAvailable=false;long position=file.reader.Position;
      try{
@@ -126,6 +126,7 @@ internal static class Program {
   return new{bank=Row(id),items,total=items.Length};
  }
  static object Preview(string id) {
+  if(Objects.TryGetValue(id,out var animation)&&animation is AnimationClip clip)return AnimationPreview.Build(manager!,clip,cache);
   var row=Row(id);var format=row.Preview switch{"audio"=>"wav","model"=>"obj","image"=>Resources.TryGetValue(id,out var image)?image.Extension:"png",_=>"json"};
   var file=Path.Combine(cache,Guid.NewGuid().ToString("N")+"."+format);
   if(Resources.TryGetValue(id,out var resource)){
@@ -138,7 +139,7 @@ internal static class Program {
   string output=Path.GetFullPath(p.GetProperty("output").GetString()!);Directory.CreateDirectory(output);
   var ids=p.GetProperty("assetIds").EnumerateArray().Select(x=>x.GetString()!).Distinct().ToArray();if(ids.Length==0)throw new InvalidOperationException("No selection");
   var format=p.GetProperty("format").GetString()!;var options=p.TryGetProperty("options",out var o)?o.Deserialize<ExportOptions>(Json)??new():new();
-  var results=new List<object>();int success=0;
+  var results=new List<object>();int success=0,rawFallback=0;
   foreach(var id in ids){
    try{
     var row=Row(id);var chosen=format=="auto"?row.Formats.First():format;
@@ -148,12 +149,22 @@ internal static class Program {
     Directory.CreateDirectory(itemFolder);var ext=Resources.TryGetValue(id,out var resource)?resource.ExportExtension(chosen):Exporters.Extension(Objects[id],chosen);
     var filename=resource?.IsBank==true?Identity.SafeName(Path.GetFileNameWithoutExtension(resource.Name))+(chosen.StartsWith("zip-",StringComparison.Ordinal)?"-"+chosen[4..]:"")+"."+ext:name+"."+ext;
     var dest=Path.Combine(itemFolder,filename);
-    if(resource is not null)resource.Write(chosen,dest);else Exporters.Write(Objects[id],chosen,dest,options);
+    void Write(string requested,string target){if(resource is not null)resource.Write(requested,target);else Exporters.Write(Objects[id],requested,target,options);}
+    string? warning=null;string requestedFormat=chosen;
+    try{Write(chosen,dest);}
+    catch(Exception conversion) when(format=="auto" && chosen!="raw" && row.Formats.Contains("raw")){
+     // Never call a failed semantic conversion successful. Auto mode can still
+     // preserve the original bytes, with an explicit fallback in UI and report.
+     if(File.Exists(dest))File.Delete(dest);
+     warning=conversion.GetBaseException().Message;
+     chosen="raw";ext=resource is not null?resource.ExportExtension(chosen):Exporters.Extension(Objects[id],chosen);
+     dest=Path.Combine(itemFolder,name+"."+ext);Write(chosen,dest);rawFallback++;
+    }
     if(!File.Exists(dest))throw new InvalidDataException("Exporter produced no file");
-    success++;results.Add(new{id,ok=true,path=dest,format=chosen});
+    success++;results.Add(new{id,ok=true,path=dest,format=chosen,requestedFormat,rawFallback=warning is not null,warning});
    }catch(Exception ex){results.Add(new{id,ok=false,error=ex.GetBaseException().Message,format});}
   }
-  var report=new{created=DateTimeOffset.UtcNow,success,failed=ids.Length-success,results};
+  var report=new{created=DateTimeOffset.UtcNow,success,failed=ids.Length-success,rawFallback,results};
   File.WriteAllText(Path.Combine(output,"export-"+DateTime.UtcNow.ToString("yyyyMMdd-HHmmss")+"-"+Guid.NewGuid().ToString("N")[..6]+".json"),JsonSerializer.Serialize(report,Json));
   return report;
  }
