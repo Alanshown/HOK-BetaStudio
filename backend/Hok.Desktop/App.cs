@@ -1,12 +1,12 @@
 using System.Diagnostics;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using System.Windows;
 using System.Windows.Media.Imaging;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
 using Microsoft.Win32;
 using Hok.Contracts;
+using Hok.Catalog;
 namespace Hok.Desktop;
 internal sealed class App:Application {
  internal static readonly JsonSerializerOptions Json=new(JsonSerializerDefaults.Web);
@@ -15,15 +15,18 @@ internal sealed class App:Application {
 internal sealed class MainWindow:Window {
  readonly WebView2 browser=new();readonly string root=AppContext.BaseDirectory;
  readonly string data=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"HokBetaStudio");
+ readonly CatalogService catalog;
  readonly string cache;readonly WorkerClient worker,previewWorker,exportWorker; readonly SemaphoreSlim requests=new(1,1),previewLane=new(1,1),exportLane=new(1,1);
  DbRecord[] activeFiles=[];int previewGeneration=-1,previewEpoch,exportEpoch;bool closing,resetting;
  readonly string[] args; List<DbRecord> files=[];int generation;CancellationTokenSource? scanCancel;
  public MainWindow(string[] startup){
-  args=startup;Directory.CreateDirectory(data);cache=Path.Combine(data,"cache",Guid.NewGuid().ToString("N"));Directory.CreateDirectory(cache);
+  args=startup;
+  if(args.Contains("--smoke")){var isolated=args.FirstOrDefault(a=>a.StartsWith("--smoke-data=",StringComparison.Ordinal));if(isolated is not null)data=Path.GetFullPath(isolated[13..]);}
+  Directory.CreateDirectory(data);catalog=new(Path.Combine(data,"catalog"),Path.Combine(root,"assets/catalog/remote-index.seed.json"),Path.Combine(root,"assets/catalog/corrections.default.json"));cache=Path.Combine(data,"cache",Guid.NewGuid().ToString("N"));Directory.CreateDirectory(cache);
   worker=new(root,cache,Path.Combine(data,"worker.log"));previewWorker=new(root,cache,Path.Combine(data,"preview.log"));exportWorker=new(root,cache,Path.Combine(data,"export.log"));Title="HOK BetaStudio";Width=1440;Height=920;MinWidth=1000;MinHeight=700;WindowStartupLocation=WindowStartupLocation.CenterScreen;
   var icon=Path.Combine(root,"assets/icons/app/app-icon-hok-256.png");if(File.Exists(icon))Icon=new BitmapImage(new Uri(icon));
   if(args.Contains("--smoke")){WindowState=WindowState.Minimized;ShowInTaskbar=false;}
-  Content=browser;Loaded+=async(_,_)=>await Init();Closed+=(_,_)=>{closing=true;scanCancel?.Cancel();worker.Dispose();previewWorker.Dispose();exportWorker.Dispose();browser.Dispose();};
+  Content=browser;Loaded+=async(_,_)=>await Init();Closed+=(_,_)=>{closing=true;catalog.Dispose();scanCancel?.Cancel();worker.Dispose();previewWorker.Dispose();exportWorker.Dispose();browser.Dispose();};
  }
  async Task Init(){
   try{
@@ -43,11 +46,12 @@ internal sealed class MainWindow:Window {
  async void OnMessage(object? sender,CoreWebView2WebMessageReceivedEventArgs e){
   string id="";try{if(!e.Source.StartsWith("https://hok.local/",StringComparison.Ordinal)||e.WebMessageAsJson.Length>1_000_000)return;
    using var doc=JsonDocument.Parse(e.WebMessageAsJson);var req=doc.RootElement;id=req.GetProperty("id").GetString()!;var method=req.GetProperty("method").GetString()!;var p=req.GetProperty("payload").Clone();
-   if(method=="clear"){
+   if(method=="catalogCheck"){Reply(id,await catalog.CheckAsync());return;}
+   if(method is "clear" or "catalogApply"){
     if(resetting)throw new InvalidOperationException("Workspace cleanup is already running.");
     resetting=true;InvalidateWorkspace();
     await requests.WaitAsync();
-    try{var removed=await ReleaseWorkspace();Reply(id,new{cleared=true,bytes=removed,generation});}
+    try{var removed=await ReleaseWorkspace();if(method=="catalogApply")Reply(id,CatalogView(await catalog.ApplyAsync(p.GetProperty("revision").GetString()!)));else Reply(id,new{cleared=true,bytes=removed,generation});}
     finally{requests.Release();resetting=false;}
     return;
    }
@@ -95,10 +99,11 @@ internal sealed class MainWindow:Window {
   files=result.Files;return new{generation,files,errors=result.Errors,visited=result.Visited};
  }
  static void VerifySnapshot(DbRecord[] snapshot){foreach(var f in snapshot){var info=new FileInfo(f.Path);if(!info.Exists||$"{info.Length}:{info.LastWriteTimeUtc.Ticks}"!=f.Fingerprint)throw new IOException("Source file changed; reload the workspace.");}}
+ object CatalogView(CatalogIndex index)=>new{version="1.3",revision=index.Revision,heroes=index.Records.Where(e=>e.Kind=="hero").Select(e=>new{id=e.Id,name=e.Name,portrait=e.Status=="quarantined"?"":e.ImageUrl}),skins=index.Records.Where(e=>e.Kind=="skin").Select(e=>new{skinId=e.Id,heroId=e.HeroId,name=e.Name,portrait=e.Status=="quarantined"?"":e.ImageUrl,artAvailable=e.Status!="quarantined"}),artOrigin="https://art.hok.local/",initialPaths=args.Where(a=>!a.StartsWith("--")).ToArray()};
  async Task<object?> Dispatch(string method,JsonElement p){
   switch(method){
    case "boot":
-    return new{version="1.2",heroes=JsonNode.Parse(File.ReadAllText(Path.Combine(root,"assets/catalog/heroes.json")))!["heroes"],skins=JsonNode.Parse(File.ReadAllText(Path.Combine(root,"assets/catalog/skins.json")))!["skins"],artOrigin="https://art.hok.local/",initialPaths=args.Where(a=>!a.StartsWith("--")).ToArray()};
+    return CatalogView(await Task.Run(()=>catalog.LoadAsync()));
    case "open":{
     var mode=p.GetProperty("mode").GetString();string[] paths;
     if(mode=="startup")paths=args.Where(a=>!a.StartsWith("--")&&(File.Exists(a)||Directory.Exists(a))).ToArray();

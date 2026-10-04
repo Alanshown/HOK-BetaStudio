@@ -1,0 +1,11 @@
+.resource-sync{position:relative;display:inline-flex;align-items:center;gap:8px;flex-shrink:0;padding:8px 12px;margin-left:10px;border:1px solid #9adfd4;border-radius:14px;background:linear-gradient(120deg,#efffffde,#edfff7f0);color:#23786d;box-shadow:0 3px 14px #25b5af13;cursor:pointer;animation:sync-arrive .5s cubic-bezier(.2,.7,.2,1),sync-glow 3.8s 1s ease-in-out infinite;transition:background .2s,transform .2s}
+.resource-sync:hover{background:#d9faf2;transform:translateY(-1px)}
+.resource-sync:focus-visible{outline:2px solid #147dba;outline-offset:3px}
+.resource-sync svg{transition:transform .55s cubic-bezier(.2,.7,.2,1)}
+.resource-sync:hover svg{transform:rotate(180deg)}
+.resource-sync.applying svg{animation:sync-turn 1s linear infinite}
+.resource-dot{width:5px;height:5px;border-radius:50%;background:#2bb1a0;box-shadow:0 0 8px #2bcbb755}
+@keyframes sync-arrive{from{opacity:0;transform:translateY(-5px) scale(.94)}to{opacity:1;transform:none}}
+@keyframes sync-glow{0%,100%{box-shadow:0 3px 14px #25b5af13}50%{box-shadow:0 3px 18px #25b5af35}}
+@keyframes sync-turn{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.resource-sync,.resource-sync svg{animation:none!important;transition:none!important}}

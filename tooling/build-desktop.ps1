@@ -1,4 +1,4 @@
-param([switch]$FrameworkDependent,[string]$OutputDirectory='build/HOK-BetaStudio-1.2-win-x64',[string]$NativeDirectory='.tools/native/x64')
+param([switch]$FrameworkDependent,[string]$OutputDirectory='build/HOK-BetaStudio-1.3-win-x64',[string]$NativeDirectory='.tools/native/x64')
 $ErrorActionPreference='Stop'
 $root=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $dotnet=Join-Path $root '.tools/dotnet/dotnet.exe'
@@ -23,12 +23,14 @@ $native=Join-Path $root $NativeDirectory
 if(-not(Test-Path -LiteralPath $native)){throw "Missing native runtime directory: $native. See docs/BUILD.md"}
 Get-ChildItem -LiteralPath $native -Filter '*.dll' | Copy-Item -Destination (Join-Path $out 'worker/x64') -Force
 Copy-Item -Path (Join-Path $root 'frontend/dist/*') -Destination (Join-Path $out 'ui') -Recurse -Force
-foreach($folder in @('catalog','portraits','placeholders','icons','fonts','licenses')){
+foreach($folder in @('placeholders','icons','fonts','licenses')){
  $target=Join-Path $out ('assets/'+$folder)
  New-Item -ItemType Directory -Path $target -Force|Out-Null
  $source=Join-Path $root ('assets/'+$folder)
  if(Test-Path -LiteralPath $source){Copy-Item -Path (Join-Path $source '*') -Destination $target -Recurse -Force}
 }
+New-Item -ItemType Directory -Path (Join-Path $out 'assets/catalog') -Force | Out-Null
+foreach($name in @('remote-index.seed.json','corrections.default.json')){Copy-Item -LiteralPath (Join-Path $root ('assets/catalog/'+$name)) -Destination (Join-Path $out 'assets/catalog') -Force}
 New-Item -ItemType Directory -Path (Join-Path $out 'ui/assets/fonts') -Force | Out-Null
 Copy-Item -Path (Join-Path $root 'assets/fonts/*') -Destination (Join-Path $out 'ui/assets/fonts') -Force
 Copy-Item -LiteralPath (Join-Path $root 'vendor/Studio-HoK/LICENSE') -Destination (Join-Path $out 'LICENSE-AssetStudio.txt') -Force

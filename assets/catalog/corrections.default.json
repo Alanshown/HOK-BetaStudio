@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "corrections": [
+    {
+      "key": "zhouyu_baixiang",
+      "enabled": true,
+      "match": {
+        "id": "132",
+        "name": "百相守梦",
+        "hero": "周瑜"
+      },
+      "set": {
+        "id": "12407"
+      },
+      "confidence": "official_page_corrected",
+      "evidence": "https://pvp.qq.com/ingame/all/tobe/skin/0703-bxsmzy.html — JUMPFORM_85_12407_0"
+    },
+    {
+      "key": "liushan_yingmiao",
+      "enabled": true,
+      "match": {
+        "id": "11402",
+        "name": "英喵野望",
+        "hero": "刘禅"
+      },
+      "set": {
+        "id": "11401"
+      },
+      "confidence": "icon_crosscheck",
+      "evidence": "https://image.smoba.qq.com/UGUI/SystemRes/900_HeroIcon/Sprite/NormalIcon/3011401.png — visual cross-check, weaker than game client configuration; 绅士熊喵 remains 11402."
+    },
+    {
+      "key": "xiaoqiao_swapped",
+      "enabled": true,
+      "match": {
+        "id": "10609",
+        "name": "小乔",
+        "hero": "时之魔女"
+      },
+      "set": {
+        "hero": "小乔",
+        "name": "时之魔女"
+      },
+      "confidence": "official_page_corrected",
+      "evidence": "https://pvp.qq.com/ingame/all/tobe/skin/0209-szmnxq.html"
+    },
+    {
+      "key": "sunwukong_swapped",
+      "enabled": true,
+      "match": {
+        "id": "16706",
+        "name": "孙悟空",
+        "hero": "大圣娶亲"
+      },
+      "set": {
+        "hero": "孙悟空",
+        "name": "大圣娶亲"
+      },
+      "confidence": "official_page_corrected",
+      "evidence": "https://pvp.qq.com/ingame/all/tobe/skin/0131-dashengs.html"
+    }
+  ],
+  "supplements": [
+    {
+      "id": "14402",
+      "name": "星际陆战队",
+      "hero": "程咬金",
+      "enabled": true,
+      "image_url": "https://image.smoba.qq.com/UGUI/SystemRes/900_HeroIcon/Sprite/NormalIcon/3014402.png",
+      "evidence": "https://image.smoba.qq.com/UGUI/SystemRes/900_HeroIcon/Sprite/NormalIcon/3014402.png ; name cross-check https://pvp.qq.com/zlkdatasys/zsbd_herolist/144.json ; visual mapping, not verified client configuration"
+    },
+    {
+      "id": "19501",
+      "name": "威尼斯狂欢",
+      "hero": "百里玄策",
+      "enabled": true,
+      "image_url": "https://image.smoba.qq.com/UGUI/SystemRes/900_HeroIcon/Sprite/NormalIcon/3019501.png",
+      "evidence": "https://image.smoba.qq.com/UGUI/SystemRes/900_HeroIcon/Sprite/NormalIcon/3019501.png ; name cross-check https://pvp.qq.com/zlkdatasys/zsbd_herolist/195.json ; visual mapping, not verified client configuration"
+    }
+  ],
+  "unresolved": [
+    {
+      "hero": "狄仁杰",
+      "name": "星际治安官",
+      "id": null,
+      "reason": "ID 未核实，不推测、不下载；官方主目录不保证覆盖星元及全部变体。"
+    }
+  ]
+}

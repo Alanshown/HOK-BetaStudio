@@ -14,7 +14,7 @@ Use Windows x64, .NET 10 SDK and Node.js/npm. Run the commands in the root READM
 |---|---|---|
 | `.tools/media/runtime/` | `ffmpeg.exe`, `vgmstream-cli.exe` and vgmstream runtime DLLs | audio decoding and MP3 conversion |
 | `.tools/native/x64/` | compatible original FBX, FMOD and codec helper DLLs | native export/decoder features |
-| `assets/portraits/` | your authorized hero and skin portraits, following catalog relative paths | full catalog imagery |
+| `assets/catalog/remote-index.seed.json` and `corrections.default.json` | validated initial HTTPS image index and exact identity corrections | 1.3 resource catalog; static game portraits are no longer packaged |
 | WebView2 Runtime | installed on the target computer | desktop web interface |
 | NSIS | `makensis.exe` on PATH, or its standard Windows installation | installer creation |
 
@@ -26,7 +26,14 @@ Media versions and source URLs are in `assets/licenses/media/NOTICE.txt`. Native
 
 ## Test scope
 
-`Hok.Contracts.Tests` runs without game DBs and uses `planning/identity-test-vectors.json`. The local fixture tests for media and rebuilding need the corresponding DB directories and, for some scripts, reports produced by earlier fixture tests. Absolute-path reports are not uploaded. Review each script's input requirements before running it.
+`Hok.Contracts.Tests` runs without game DBs and uses `planning/identity-test-vectors.json`. `Hok.Catalog.Tests` validates the 1.3 index normalization, staging, atomic application, offline behavior and recovery without network access by default. Add `--live` after the project-root argument to check the official endpoints. The local fixture tests for media and rebuilding need the corresponding DB directories and, for some scripts, reports produced by earlier fixture tests. Absolute-path reports are not uploaded. Review each script's input requirements before running it.
+
+```powershell
+dotnet run --project backend/Hok.Catalog.Tests -c Release -- .
+dotnet run --project backend/Hok.Catalog.Tests -c Release -- . --live
+```
+
+See [1.3 resource synchronization](RESOURCE-SYNC-1.3.md) for cache boundaries and the isolated desktop integration test. Build/package scripts now default to **1.3**. Existing published 1.2 downloads and build directories are not overwritten.
 
 Do not use an empty public fixture directory to infer game compatibility. The source snapshot can compile without game data, but native previews and fixture integration tests require separately supplied inputs.
 
@@ -34,9 +41,9 @@ Do not use an empty public fixture directory to infer game compatibility. The so
 
 The repository contains the three README variants, build documentation and real desktop screenshots. The separately maintained demonstration page and its code are intentionally excluded; this repository is not a GitHub Pages deployment source.
 
-## Source-only CI
+## Local source checks
 
-The `Source checks` workflow builds the React frontend, C# desktop host and worker on Windows, then runs `Hok.Contracts.Tests`. It uses only public repository inputs; game DBs, artwork libraries, media executables and private native helpers are not required. It does not package, upload artifacts or publish releases. A passing run does not verify native export, game compatibility or installer behavior.
+The automatic `Source checks` workflow was removed at the maintainer's request. The frontend build, C# builds, `Hok.Contracts.Tests`, `Hok.Catalog.Tests` and documentation checks remain available locally. These source-only checks require no private game DBs or native media/export binaries. A passing source build does not verify native export, game compatibility or installer behavior. No workflow publishes packages automatically.
 
 ## Release status and review
 
