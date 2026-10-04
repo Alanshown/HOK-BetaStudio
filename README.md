@@ -17,15 +17,15 @@
 
 <!-- README-I18N:END -->
 
-Source version **1.3** adds [silent resource synchronization](docs/RESOURCE-SYNC-1.3.md). The download buttons above still point to the published 1.2 release until 1.3 is uploaded.
+Phiên bản **1.3** bổ sung [đồng bộ tài nguyên ngầm](docs/RESOURCE-SYNC-1.3.md) và đã có trên [trang Release 1.3](https://github.com/Alanshown/HOK-BetaStudio/releases/tag/1.3). Xem [ghi chú phát hành](docs/releases/1.3/RELEASE-NOTES.md).
 
-**[Download installer](https://github.com/Alanshown/HOK-BetaStudio/releases/download/1.2/HOK-BetaStudio-1.2-rebuild-beta-win-x64-Setup.exe) · [Download portable ZIP](https://github.com/Alanshown/HOK-BetaStudio/releases/download/1.2/HOK-BetaStudio-1.2-rebuild-beta-win-x64.zip)**
+**[Tải bộ cài 1.3](https://github.com/Alanshown/HOK-BetaStudio/releases/download/1.3/HOK-BetaStudio-1.3-win-x64-setup.exe) · [Tải ZIP portable 1.3](https://github.com/Alanshown/HOK-BetaStudio/releases/download/1.3/HOK-BetaStudio-1.3-win-x64-portable.zip)**
 
-Windows x64 · Version 1.2 preview · [Installation & checksums](docs/INSTALL.md) · [MIT license](LICENSE)
+Windows x64 · Source version 1.3 · [Installation & checksums](docs/INSTALL.md) · [MIT license](LICENSE)
 
 Browse DB packages by hero and skin, inspect Unity and non-Unity entries, preview models and audio, and export selected assets in batches. A C# backend keeps parsing, previews and exports outside the interface process.
 
-**[Screenshots](#export) · [Releases](https://github.com/Alanshown/HOK-BetaStudio/releases) · [Issues](https://github.com/Alanshown/HOK-BetaStudio/issues)**
+**[Screenshots](#export) · [Releases](https://github.com/Alanshown/HOK-BetaStudio/releases/tag/1.3) · [Issues](https://github.com/Alanshown/HOK-BetaStudio/issues)**
 
 ![Hero catalog in the desktop application](docs/images/01-catalog.png)
 
@@ -144,10 +144,12 @@ powershell -ExecutionPolicy Bypass -File tooling/package-desktop.ps1 -BuildDirec
 
 The separately maintained demonstration page is intentionally excluded from this repository. The images above are real desktop screenshots.
 
+For maintainers: [PowerShell guide to commits, branches, pushing and merging PRs (Chinese)](docs/GIT-PR-GUIDE.zh.md).
+
 <a id="download"></a>
 ## Download and use
 
-Version 1.2 is publicly available on the [release page](https://github.com/Alanshown/HOK-BetaStudio/releases/tag/1.2). Choose the Setup installer or portable ZIP; GitHub's automatic **Source code** downloads are not runnable applications. See [installation, SHA-256 verification and troubleshooting](docs/INSTALL.md).
+Choose the Setup installer or portable ZIP from the [Release page](https://github.com/Alanshown/HOK-BetaStudio/releases/tag/1.3), using the version actually listed there. A source-code update does not automatically publish binary attachments. GitHub’s automatic **Source code** downloads are not runnable applications. See [installation, SHA-256 verification and troubleshooting](docs/INSTALL.md).
 
 Extract the **whole portable ZIP** and run `HOK BetaStudio.exe`, or use the Windows installer. Do not move the EXE away from its `worker`, `ui` and `assets` folders. [Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/#download) is required even with the self-contained .NET package; Setup does not install it automatically. Packages are not currently code-signed.
 
