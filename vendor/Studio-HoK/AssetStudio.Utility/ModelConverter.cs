@@ -810,6 +810,8 @@ namespace AssetStudio
                 AnimationList.Add(iAnim);
                 if (animationClip.m_Legacy)
                 {
+                    if (animationClip.m_HokLegacyAnimation?.bindings.Count > 0)
+                        animationClip.PrepareExportCurves();
                     foreach (var m_CompressedRotationCurve in animationClip.m_CompressedRotationCurves)
                     {
                         var track = iAnim.FindTrack(FixBonePath(animationClip, m_CompressedRotationCurve.m_Path));

@@ -11,6 +11,7 @@ internal sealed class WorkerClient : IDisposable {
    if(version!=epoch)throw new OperationCanceledException();
    if(process is null||process.HasExited){process?.Dispose();var exe=Path.Combine(baseDir,"worker","Hok.Worker.exe");
     var start=new ProcessStartInfo(exe){UseShellExecute=false,CreateNoWindow=true,RedirectStandardInput=true,RedirectStandardOutput=true,RedirectStandardError=true,WorkingDirectory=Path.GetDirectoryName(exe)!};
+    start.StandardInputEncoding=start.StandardOutputEncoding=start.StandardErrorEncoding=new System.Text.UTF8Encoding(false);
     start.ArgumentList.Add(cache);process=Process.Start(start)??throw new IOException("Worker could not start");var active=process;
     _=Task.Run(async()=>{try{while(await active.StandardError.ReadLineAsync() is { } line){try{await File.AppendAllTextAsync(logPath,line+Environment.NewLine);}catch(IOException){}}}catch(ObjectDisposedException){}catch(IOException){}});
    }

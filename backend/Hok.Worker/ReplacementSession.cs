@@ -46,13 +46,15 @@ internal sealed class ReplacementSession
         if (objects.TryGetValue(id, out var obj))
         {
             if (obj.GetType() == typeof(Obj) || obj is MonoBehaviour) throw new NotSupportedException("Beta cannot safely edit opaque/custom object layouts. Replace only supported raw objects or an identified resource stream.");
-            var entries = manager.ContainerEntries.Where(e => e.Id == obj.assetsFile.fileName).ToArray();
+            if (!obj.assetsFile.ParseStatuses.TryGetValue(obj.m_PathID, out var parse) || parse.Status != "typed-complete")
+                throw new NotSupportedException("Beta replacement requires a completely read object; partial/failed layouts remain read-only.");
+            var entries = manager.ContainerEntries.Where(e => e.Id == (obj.assetsFile.containerEntryId ?? obj.assetsFile.fileName) && string.Equals(e.Source,obj.assetsFile.originalPath,StringComparison.OrdinalIgnoreCase)).ToArray();
             if (entries.Length != 1) throw new InvalidDataException("Cannot uniquely identify this object's QTS container.");
-            entry = entries[0]; offset = checked((int)obj.reader.byteStart); length = checked((int)obj.byteSize); name = obj.Name;
+            entry = entries[0]; offset = checked((int)(obj.assetsFile.containerByteOffset + obj.reader.byteStart)); length = checked((int)obj.byteSize); name = obj.Name;
         }
         else if (resources.TryGetValue(id, out var resource))
         {
-            if (resource.Parent is not null || resource.Type is "PackageMetadata" or "CompressedQtsChunk" or "UnparsedObject")
+            if (resource.Parent is not null || resource.Type is "PackageMetadata" or "QtsRawMetadata" or "CompressedQtsChunk" or "UnparsedObject")
                 throw new NotSupportedException("Beta cannot replace nested media, package metadata or undecoded chunks. Use the complete original container where supported.");
             var entries = manager.ContainerEntries.Where(e => ReferenceEquals(e.Data, resource.Data)).ToArray();
             if (entries.Length != 1) throw new InvalidDataException("No unique original QTS entry for this resource.");

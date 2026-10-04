@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Buffers;
 using System.Buffers.Binary;
 using System.Collections.Generic;
@@ -111,6 +111,7 @@ namespace AssetStudio
         }
         public override byte[] ReadBytes(int count)
         {
+            if (count < 0) throw new ArgumentOutOfRangeException(nameof(count));
             if (count == 0)
             {
                 return Array.Empty<byte>();
@@ -154,7 +155,8 @@ namespace AssetStudio
         {
             var result = "";
             var length = ReadInt32();
-            if (length > 0 && length <= Remaining)
+            if (length < 0 || length > Remaining) throw new InvalidDataException($"Invalid string length {length} at offset {Position}");
+            if (length > 0)
             {
                 var stringData = ReadBytes(length);
                 result = Encoding.UTF8.GetString(stringData);

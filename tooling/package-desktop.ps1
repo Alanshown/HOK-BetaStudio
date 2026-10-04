@@ -1,4 +1,4 @@
-param([string]$BuildDirectory='build/HOK-BetaStudio-1.3-win-x64',[string]$OutputDirectory='deliverables',[string]$NsisCompiler='')
+param([string]$BuildDirectory='build/HOK-BetaStudio-1.3-win-x64',[string]$OutputDirectory='deliverables',[string]$NsisCompiler='',[switch]$InstallerOnly)
 $ErrorActionPreference='Stop'
 $root=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $source=[IO.Path]::GetFullPath((Join-Path $root $BuildDirectory))
@@ -10,7 +10,7 @@ if(-not(Test-Path -LiteralPath $NsisCompiler)){throw 'NSIS is required to create
 New-Item -ItemType Directory -Path $output -Force | Out-Null
 $zip=Join-Path $output 'HOK-BetaStudio-1.3-win-x64-portable.zip'
 $setup=Join-Path $output 'HOK-BetaStudio-1.3-win-x64-setup.exe'
-if((Test-Path -LiteralPath $zip) -or (Test-Path -LiteralPath $setup)){throw 'Package output already exists; choose another OutputDirectory to preserve it.'}
+if(((-not $InstallerOnly) -and (Test-Path -LiteralPath $zip)) -or (Test-Path -LiteralPath $setup)){throw 'Package output already exists; choose another OutputDirectory to preserve it.'}
 $files=Get-ChildItem -LiteralPath $source -Recurse -File
 if($files | Where-Object {$_.Extension -in @('.db','.log')}){throw 'Unexpected DB or log in build input; audit before packaging.'}
 $temp=Join-Path $root ('.cache/installer-'+[Guid]::NewGuid().ToString('N'))
@@ -23,11 +23,17 @@ $dirs=Get-ChildItem -LiteralPath $source -Recurse -Directory | Sort-Object {$_.F
 foreach($dir in $dirs){$relative=$dir.FullName.Substring($source.Length+1);$lines.Add('RMDir "$INSTDIR\'+$relative+'"')}
 $manifest=Join-Path $temp 'uninstall-files.nsh'
 [IO.File]::WriteAllLines($manifest,$lines,[Text.UTF8Encoding]::new($false))
-Compress-Archive -LiteralPath $source -DestinationPath $zip -CompressionLevel Optimal
-& $NsisCompiler /V2 "/DBUILD_DIR=$source" "/DOUTPUT_FILE=$setup" "/DUNINSTALL_MANIFEST=$manifest" (Join-Path $PSScriptRoot 'installer.nsi')
+$checks=[Collections.Generic.List[string]]::new()
+foreach($file in $files){$relative=$file.FullName.Substring($source.Length+1);$checks.Add('!insertmacro CheckInstallFile "'+$relative+'"')}
+foreach($dir in $dirs){$relative=$dir.FullName.Substring($source.Length+1);$checks.Add('!insertmacro CheckInstallSubdirectory "'+$relative+'"')}
+$checkManifest=Join-Path $temp 'install-check.nsh'
+[IO.File]::WriteAllLines($checkManifest,$checks,[Text.UTF8Encoding]::new($false))
+if(-not $InstallerOnly){Compress-Archive -LiteralPath $source -DestinationPath $zip -CompressionLevel Optimal}
+& $NsisCompiler /INPUTCHARSET UTF8 /V2 "/DBUILD_DIR=$source" "/DOUTPUT_FILE=$setup" "/DUNINSTALL_MANIFEST=$manifest" "/DINSTALL_CHECK_MANIFEST=$checkManifest" (Join-Path $PSScriptRoot 'installer.nsi')
 if($LASTEXITCODE){throw 'NSIS compilation failed.'}
-$hashes=@($zip,$setup) | ForEach-Object { $hash=Get-FileHash -LiteralPath $_ -Algorithm SHA256; $hash.Hash.ToLowerInvariant()+'  '+[IO.Path]::GetFileName($_) }
+$packages=if($InstallerOnly){@($setup)}else{@($zip,$setup)}
+$hashes=$packages | ForEach-Object { $hash=Get-FileHash -LiteralPath $_ -Algorithm SHA256; $hash.Hash.ToLowerInvariant()+'  '+[IO.Path]::GetFileName($_) }
 [IO.File]::WriteAllLines((Join-Path $output 'SHA256SUMS.txt'),$hashes,[Text.UTF8Encoding]::new($false))
-Write-Output $zip
+if(-not $InstallerOnly){Write-Output $zip}
 Write-Output $setup
 Write-Output 'LOCAL PACKAGING ONLY: no upload performed. Review docs/RELEASE-CHECKLIST.md before distributing this build.'

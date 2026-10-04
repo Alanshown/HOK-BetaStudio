@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 
 namespace AssetStudio
@@ -18,21 +18,15 @@ namespace AssetStudio
         public int[] version => assetsFile.version;
         public BuildType buildType => assetsFile.buildType;
 
-        public ObjectReader(EndianBinaryReader reader, SerializedFile assetsFile, ObjectInfo objectInfo, Game game) : base(reader.BaseStream, reader.Endian)
+        public ObjectReader(EndianBinaryReader reader, SerializedFile assetsFile, ObjectInfo objectInfo, Game game) : base(new ObjectRangeStream(reader.BaseStream, objectInfo.byteStart, objectInfo.byteSize), reader.Endian)
         {
             this.assetsFile = assetsFile;
             Game = game;
             m_PathID = objectInfo.m_PathID;
             byteStart = objectInfo.byteStart;
             byteSize = objectInfo.byteSize;
-            if (Enum.IsDefined(typeof(ClassIDType), objectInfo.classID))
-            {
-                type = (ClassIDType)objectInfo.classID;
-            }
-            else
-            {
-                type = ClassIDType.UnknownType;
-            }
+            // Preserve numeric class identity even when the enum is not known.
+            type = (ClassIDType)objectInfo.classID;
             serializedType = objectInfo.serializedType;
             platform = assetsFile.m_TargetPlatform;
             m_Version = assetsFile.header.m_Version;

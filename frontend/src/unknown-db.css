@@ -1,0 +1,13 @@
+.unknown-db-panel{margin-top:24px;border:1px solid white;border-radius:16px;background:var(--panel);min-width:0;overflow:hidden}
+.unknown-db-panel>header{display:flex;align-items:center;gap:12px;padding:17px 20px;border-bottom:1px solid var(--line)}
+.unknown-db-list{display:flex;flex-direction:column}
+.unknown-db-row{display:flex;align-items:center;gap:14px;padding:17px 20px;text-align:left;border-bottom:1px solid var(--line);min-width:0}
+.unknown-db-row:last-child{border-bottom:0}
+.unknown-db-row:hover,.unknown-db-row.selected{background:#e7f3ef}
+.unknown-db-badge{font-size:11px;color:#677971;background:#edf2ef;border:1px solid #cfddd6;border-radius:7px;padding:4px 8px;flex-shrink:0}
+.unknown-db-details{display:flex;flex-direction:column;gap:7px;min-width:0}
+.unknown-db-details strong{font-weight:500;font-size:13px;overflow-wrap:anywhere}
+.unknown-db-details .mono{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.skin-layout>.unknown-db-panel{margin-top:0;flex:1}
+.skin-layout.with-assets>.unknown-db-panel{width:260px;flex:0 0 260px}
+@media(max-width:950px){.skin-layout.with-assets>.unknown-db-panel{width:100%;flex:auto}}

@@ -142,8 +142,10 @@ namespace AssetStudio
                 return false;
             }
         }
-        public static string Convert(this AnimationClip clip)
+        private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<AnimationClip, object> prepared = new System.Runtime.CompilerServices.ConditionalWeakTable<AnimationClip, object>();
+        public static void PrepareExportCurves(this AnimationClip clip)
         {
+            if (prepared.TryGetValue(clip, out _)) return;
             if (!clip.m_Legacy || clip.m_MuscleClip != null)
             {
                 var converter = AnimationClipConverter.Process(clip);
@@ -154,6 +156,11 @@ namespace AssetStudio
                 clip.m_FloatCurves = converter.Floats.Union(clip.m_FloatCurves).ToList();
                 clip.m_PPtrCurves = converter.PPtrs.Union(clip.m_PPtrCurves).ToList();
             }
+            prepared.Add(clip, new object());
+        }
+        public static string Convert(this AnimationClip clip)
+        {
+            clip.PrepareExportCurves();
             return ConvertSerializedAnimationClip(clip);
         }
         public static string ConvertSerializedAnimationClip(AnimationClip animationClip)
@@ -198,7 +205,15 @@ namespace AssetStudio
             node.Add(nameof(clip.m_WrapMode), clip.m_WrapMode);
             node.Add(nameof(clip.m_Bounds), clip.m_Bounds.ExportYAML(version));
             node.Add(nameof(clip.m_ClipBindingConstant), clip.m_ClipBindingConstant.ExportYAML(version));
-            node.Add("m_AnimationClipSettings", clip.m_MuscleClip != null ? clip.m_MuscleClip.ExportYAML(version) : new YAMLMappingNode());
+            var settings = clip.m_MuscleClip != null ? clip.m_MuscleClip.ExportYAML(version) : new YAMLMappingNode();
+            if (clip.m_Legacy && clip.m_HokLegacyAnimation?.bindings.Count > 0)
+            {
+                var legacySettings = new YAMLMappingNode();
+                legacySettings.Add("m_StartTime", clip.m_HokLegacyAnimation.startTime);
+                legacySettings.Add("m_StopTime", clip.m_HokLegacyAnimation.stopTime);
+                settings = legacySettings;
+            }
+            node.Add("m_AnimationClipSettings", settings);
             node.Add(nameof(clip.m_Events), clip.m_Events.ExportYAML(version));
             return node;
         }
