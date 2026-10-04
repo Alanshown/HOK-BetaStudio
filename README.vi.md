@@ -17,15 +17,15 @@
 
 <!-- README-I18N:END -->
 
-Mã nguồn phiên bản **1.3** bổ sung [đồng bộ tài nguyên ngầm](docs/RESOURCE-SYNC-1.3.md). Các nút tải phía trên vẫn trỏ tới bản 1.2 đã phát hành cho đến khi 1.3 được tải lên.
+版本 **1.3** 新增[静默资源同步](docs/RESOURCE-SYNC-1.3.md)，已在 [1.3 发行页](https://github.com/Alanshown/HOK-BetaStudio/releases/tag/1.3)提供下载。查看[发行说明](docs/releases/1.3/RELEASE-NOTES.md)。
 
-**[Tải bộ cài](https://github.com/Alanshown/HOK-BetaStudio/releases/download/1.2/HOK-BetaStudio-1.2-rebuild-beta-win-x64-Setup.exe) · [Tải ZIP portable](https://github.com/Alanshown/HOK-BetaStudio/releases/download/1.2/HOK-BetaStudio-1.2-rebuild-beta-win-x64.zip)**
+**[下载 1.3 安装版](https://github.com/Alanshown/HOK-BetaStudio/releases/download/1.3/HOK-BetaStudio-1.3-win-x64-setup.exe) · [下载 1.3 便携 ZIP](https://github.com/Alanshown/HOK-BetaStudio/releases/download/1.3/HOK-BetaStudio-1.3-win-x64-portable.zip)**
 
-Windows x64 · Bản xem trước 1.2 · [Cài đặt và kiểm tra](docs/INSTALL.md#tiếng-việt) · [Giấy phép MIT](LICENSE)
+Windows x64 · Mã nguồn phiên bản 1.3 · [Cài đặt và kiểm tra](docs/INSTALL.md#tiếng-việt) · [Giấy phép MIT](LICENSE)
 
 Duyệt gói DB theo tướng và trang phục, kiểm tra dữ liệu Unity lẫn dữ liệu khác, xem mô hình, nghe âm thanh và xuất hàng loạt. Backend C# tách việc phân tích, xem trước và xuất khỏi tiến trình giao diện.
 
-**[Ảnh chụp](#export) · [Bản phát hành](https://github.com/Alanshown/HOK-BetaStudio/releases) · [Báo lỗi](https://github.com/Alanshown/HOK-BetaStudio/issues)**
+**[Ảnh chụp](#export) · [Bản phát hành](https://github.com/Alanshown/HOK-BetaStudio/releases/tag/1.3) · [Báo lỗi](https://github.com/Alanshown/HOK-BetaStudio/issues)**
 
 ![Danh mục tướng trong ứng dụng desktop](docs/images/01-catalog.png)
 
@@ -144,10 +144,12 @@ powershell -ExecutionPolicy Bypass -File tooling/package-desktop.ps1 -BuildDirec
 
 Trang trình diễn được duy trì riêng và không nằm trong kho này. Các hình ở trên là ảnh chụp ứng dụng desktop thực tế.
 
+Dành cho người duy trì: [hướng dẫn PowerShell về commit, nhánh, push và hợp nhất PR (tiếng Trung)](docs/GIT-PR-GUIDE.zh.md).
+
 <a id="download"></a>
 ## Tải xuống và sử dụng
 
-Phiên bản 1.2 đã có công khai trên [trang phát hành](https://github.com/Alanshown/HOK-BetaStudio/releases/tag/1.2). Chọn bộ cài Setup hoặc ZIP portable; tệp **Source code** do GitHub tự tạo là mã nguồn, không phải ứng dụng chạy được. Xem [cài đặt, kiểm tra SHA-256 và khắc phục sự cố](docs/INSTALL.md#tiếng-việt).
+Chọn bộ cài Setup hoặc ZIP portable của phiên bản thực sự đã được đăng trên [trang Release](https://github.com/Alanshown/HOK-BetaStudio/releases/tag/1.3). Cập nhật mã nguồn không tự phát hành tệp nhị phân. Tệp **Source code** do GitHub tạo không phải ứng dụng chạy được. Xem [cài đặt, kiểm tra SHA-256 và khắc phục sự cố](docs/INSTALL.md#tiếng-việt).
 
 Giải nén **toàn bộ ZIP portable** rồi chạy `HOK BetaStudio.exe`, hoặc dùng bộ cài Windows. Không tách EXE khỏi các thư mục `worker`, `ui`, `assets`. Gói .NET self-contained vẫn cần [Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/#download); Setup không tự cài runtime này. Hiện các gói chưa được ký mã.
 

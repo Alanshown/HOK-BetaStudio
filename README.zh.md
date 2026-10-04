@@ -17,15 +17,15 @@
 
 <!-- README-I18N:END -->
 
-当前源码版本 **1.3** 新增[静默资源同步](docs/RESOURCE-SYNC-1.3.md)。在 1.3 上传前，上方下载按钮仍指向已发布的 1.2。
+Version **1.3** adds [silent resource synchronization](docs/RESOURCE-SYNC-1.3.md) and is available on the [1.3 Release page](https://github.com/Alanshown/HOK-BetaStudio/releases/tag/1.3). See the [release notes](docs/releases/1.3/RELEASE-NOTES.md).
 
-**[下载安装版](https://github.com/Alanshown/HOK-BetaStudio/releases/download/1.2/HOK-BetaStudio-1.2-rebuild-beta-win-x64-Setup.exe) · [下载便携 ZIP](https://github.com/Alanshown/HOK-BetaStudio/releases/download/1.2/HOK-BetaStudio-1.2-rebuild-beta-win-x64.zip)**
+**[Download installer 1.3](https://github.com/Alanshown/HOK-BetaStudio/releases/download/1.3/HOK-BetaStudio-1.3-win-x64-setup.exe) · [Download portable ZIP 1.3](https://github.com/Alanshown/HOK-BetaStudio/releases/download/1.3/HOK-BetaStudio-1.3-win-x64-portable.zip)**
 
-Windows x64 · 1.2 预览版 · [安装与校验](docs/INSTALL.md#简体中文) · [MIT 许可证](LICENSE)
+Windows x64 · 源码版本 1.3 · [安装与校验](docs/INSTALL.md#简体中文) · [MIT 许可证](LICENSE)
 
 按英雄和皮肤浏览 DB 包，检查 Unity 与非 Unity 文件，预览模型和音频，并批量导出所选资产。C# 后端将解析、预览和导出放在独立于界面的进程中运行。
 
-**[程序截图](#export) · [版本下载](https://github.com/Alanshown/HOK-BetaStudio/releases) · [问题反馈](https://github.com/Alanshown/HOK-BetaStudio/issues)**
+**[程序截图](#export) · [版本下载](https://github.com/Alanshown/HOK-BetaStudio/releases/tag/1.3) · [问题反馈](https://github.com/Alanshown/HOK-BetaStudio/issues)**
 
 ![桌面程序的英雄目录](docs/images/01-catalog.png)
 
@@ -144,10 +144,12 @@ powershell -ExecutionPolicy Bypass -File tooling/package-desktop.ps1 -BuildDirec
 
 演示页面单独维护，不纳入此仓库。上方图像均为真实桌面程序截图。
 
+维护者操作：[PowerShell 提交代码、创建分支、推送与合并 PR 指南](docs/GIT-PR-GUIDE.zh.md)。
+
 <a id="download"></a>
 ## 下载与使用
 
-1.2 版本已在[发行页面](https://github.com/Alanshown/HOK-BetaStudio/releases/tag/1.2)公开提供。选择 Setup 安装程序或便携 ZIP；GitHub 自动生成的 **Source code** 是源码，不是可运行程序。参阅[安装、SHA-256 校验与故障排查](docs/INSTALL.md#简体中文)。
+从[发行页面](https://github.com/Alanshown/HOK-BetaStudio/releases/tag/1.3)选择实际已发布版本的 Setup 安装程序或便携 ZIP。源码更新不等于二进制附件已发布；GitHub 自动生成的 **Source code** 是源码，不是可运行程序。参阅[安装、SHA-256 校验与故障排查](docs/INSTALL.md#简体中文)。
 
 解压**整个便携 ZIP**并运行 `HOK BetaStudio.exe`，或者使用 Windows 安装程序。不要将 EXE 与 `worker`、`ui`、`assets` 文件夹分开。自包含 .NET 包仍需要 [Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/#download)，Setup 不会自动安装它。目前程序包未进行代码签名。
 
