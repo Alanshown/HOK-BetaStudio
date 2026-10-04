@@ -17,9 +17,9 @@
 
 <!-- README-I18N:END -->
 
-Phiên bản **1.3** bổ sung [đồng bộ tài nguyên ngầm](docs/RESOURCE-SYNC-1.3.md) và đã có trên [trang Release 1.3](https://github.com/Alanshown/HOK-BetaStudio/releases/tag/1.3). Xem [ghi chú phát hành](docs/releases/1.3/RELEASE-NOTES.md).
+Version **1.3** adds [silent resource synchronization](docs/RESOURCE-SYNC-1.3.md) and is available on the [1.3 Release page](https://github.com/Alanshown/HOK-BetaStudio/releases/tag/1.3). See the [release notes](docs/releases/1.3/RELEASE-NOTES.md).
 
-**[Tải bộ cài 1.3](https://github.com/Alanshown/HOK-BetaStudio/releases/download/1.3/HOK-BetaStudio-1.3-win-x64-setup.exe) · [Tải ZIP portable 1.3](https://github.com/Alanshown/HOK-BetaStudio/releases/download/1.3/HOK-BetaStudio-1.3-win-x64-portable.zip)**
+**[Download installer 1.3](https://github.com/Alanshown/HOK-BetaStudio/releases/download/1.3/HOK-BetaStudio-1.3-win-x64-setup.exe) · [Download portable ZIP 1.3](https://github.com/Alanshown/HOK-BetaStudio/releases/download/1.3/HOK-BetaStudio-1.3-win-x64-portable.zip)**
 
 Windows x64 · Source version 1.3 · [Installation & checksums](docs/INSTALL.md) · [MIT license](LICENSE)
 
