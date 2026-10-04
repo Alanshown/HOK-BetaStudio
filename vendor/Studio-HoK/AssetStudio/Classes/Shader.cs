@@ -1076,6 +1076,10 @@ namespace AssetStudio
         public uint[][] decompressedLengths;
         public byte[] compressedBlob;
         public uint[] stageCounts;
+        public uint[][] m_HokCodeOffsets;
+        public uint[][] m_HokCodeCompressedLengths;
+        public uint[][] m_HokCodeDecompressedLengths;
+        public byte[] m_HokCodeBlob;
 
         public override string Name => m_ParsedForm?.m_Name ?? m_Name;
 
@@ -1085,7 +1089,10 @@ namespace AssetStudio
             {
                 m_ParsedForm = new SerializedShader(reader);
                 platforms = reader.ReadUInt32Array().Select(x => (ShaderCompilerPlatform)x).ToArray();
-                if (version[0] > 2019 || (version[0] == 2019 && version[1] >= 3)) //2019.3 and up
+                // HOK 2022.3.5 retains one offset/length per platform, rather
+                // than Unity's newer jagged arrays. Do not consume blob bytes
+                // as nested array counts.
+                if (!HokAnimationLayout.Applies(reader) && (version[0] > 2019 || (version[0] == 2019 && version[1] >= 3))) //2019.3 and up
                 {
                     offsets = reader.ReadUInt32ArrayArray();
                     compressedLengths = reader.ReadUInt32ArrayArray();
@@ -1115,6 +1122,25 @@ namespace AssetStudio
                     var codeDecompressedLengths = reader.ReadUInt32ArrayArray();
                     var codeCompressedBlob = reader.ReadUInt8Array();
                     reader.AlignStream();
+                }
+
+                if (HokAnimationLayout.Applies(reader))
+                {
+                    m_HokCodeOffsets = reader.ReadUInt32ArrayArray();
+                    m_HokCodeCompressedLengths = reader.ReadUInt32ArrayArray();
+                    m_HokCodeDecompressedLengths = reader.ReadUInt32ArrayArray();
+                    m_HokCodeBlob = reader.ReadUInt8Array();
+                    reader.AlignStream();
+                    if (m_HokCodeOffsets.Length != platforms.Length || m_HokCodeCompressedLengths.Length != platforms.Length || m_HokCodeDecompressedLengths.Length != platforms.Length)
+                        throw new System.IO.InvalidDataException("HOK shader code platform count mismatch.");
+                    for (int p = 0; p < platforms.Length; p++)
+                    {
+                        if (m_HokCodeOffsets[p].Length != m_HokCodeCompressedLengths[p].Length || m_HokCodeOffsets[p].Length != m_HokCodeDecompressedLengths[p].Length)
+                            throw new System.IO.InvalidDataException("HOK shader code block count mismatch.");
+                        for (int b = 0; b < m_HokCodeOffsets[p].Length; b++)
+                            if ((long)m_HokCodeOffsets[p][b] + m_HokCodeCompressedLengths[p][b] > m_HokCodeBlob.LongLength)
+                                throw new System.IO.InvalidDataException("HOK shader code block exceeds its blob.");
+                    }
                 }
 
                 if ((version[0] == 2021 && version[1] > 3) ||

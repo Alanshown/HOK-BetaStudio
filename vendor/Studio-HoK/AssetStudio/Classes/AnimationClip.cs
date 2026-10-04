@@ -1094,7 +1094,10 @@ namespace AssetStudio
         public float minimum;
         public float step;
         public uint kind;
-        public int Dimension => kind == 1 ? 4 : kind == 2 ? 3 : kind == 3 ? 1 : throw new InvalidDataException("Unknown HOK dense group kind.");
+        public int GroupType => (int)(kind & 255);
+        public int BitWidth => (int)(kind >> 8);
+        public int Dimension => GroupType == 1 ? 4 : GroupType == 2 ? 3 : GroupType == 3 ? 1 : throw new InvalidDataException($"Unknown HOK dense group kind: {kind}.");
+        public HokDenseRange() { }
         public HokDenseRange(ObjectReader reader) { minimum = reader.ReadSingle(); step = reader.ReadSingle(); kind = reader.ReadUInt32(); }
     }
 
@@ -1125,8 +1128,9 @@ namespace AssetStudio
         public HokLegacyAnimation(ObjectReader reader)
         {
             sizeField = reader.ReadUInt32(); clip = new Clip(reader);
-            // The nonempty legacy section has one additional word, retained without interpreting it.
-            if (sizeField != 0) unknownWord = reader.ReadUInt32();
+            // The older UInt16 layout has an additional word. Bit-packed dense
+            // groups are followed directly by the clip time range.
+            if (sizeField != 0 && !clip.m_DenseClip.m_HokRanges.Any(r => r.BitWidth != 0)) unknownWord = reader.ReadUInt32();
             startTime = reader.ReadSingle(); stopTime = reader.ReadSingle();
             names = reader.ReadStringArray(); pathIndices = reader.ReadInt32Array();
             int count = reader.ReadInt32();
@@ -1171,14 +1175,76 @@ namespace AssetStudio
                 if (m_HokCompressedSamples.Length > 0)
                 {
                     if (m_SampleArray.Length != 0) throw new InvalidDataException("Both HOK dense encodings are populated.");
-                    var ranges = m_HokRanges.SelectMany(x => Enumerable.Repeat(x, x.Dimension)).ToArray();
-                    if (ranges.Length != m_CurveCount || (long)m_FrameCount * m_CurveCount != m_HokCompressedSamples.Length)
-                        throw new InvalidDataException("HOK dense sample dimensions mismatch.");
-                    m_SampleArray = new float[m_HokCompressedSamples.Length];
-                    for (int i = 0; i < m_SampleArray.Length; i++)
-                    { var range = ranges[i % ranges.Length]; m_SampleArray[i] = range.minimum + m_HokCompressedSamples[i] * range.step; }
+                    m_SampleArray = DecodeHokSamples(m_FrameCount, m_CurveCount, m_HokCompressedSamples, m_HokRanges);
                 }
             }
+        }
+        public static float[] DecodeHokSamples(int frames, uint curves, ushort[] words, IList<HokDenseRange> ranges)
+        {
+            if (frames < 0 || ranges.Sum(r => (long)r.Dimension) != curves)
+                throw new InvalidDataException("HOK dense curve dimensions mismatch.");
+            long bitsPerFrame = 0;
+            foreach (var r in ranges)
+            {
+                if (r.BitWidth > 16 || !float.IsFinite(r.minimum) || !float.IsFinite(r.step) || r.step < 0)
+                    throw new InvalidDataException($"Invalid HOK dense range: kind={r.kind}.");
+                // No precision byte: the older layout stores every component as
+                // a full UInt16. Newer groups encode precision in the high byte;
+                // quaternions store a three-bit selector/sign and three components.
+                bitsPerFrame += r.BitWidth == 0 ? r.Dimension * 16
+                    : r.GroupType == 1 ? 3 + r.BitWidth * 3 : r.Dimension * r.BitWidth;
+            }
+            long wordsPerFrame = (bitsPerFrame + 15) / 16;
+            long count = (long)frames * curves;
+            if (wordsPerFrame * frames != words.LongLength || count > 128 * 1024 * 1024)
+                throw new InvalidDataException("HOK dense packed frame length mismatch or excessive decoded sample count.");
+            var result = new float[checked((int)count)];
+            int output = 0;
+            for (int frame = 0; frame < frames; frame++)
+            {
+                // Every frame starts on a UInt16 boundary, not on the next bit.
+                long bit = frame * wordsPerFrame * 16;
+                uint ReadBits(int width)
+                {
+                    uint value = 0;
+                    for (int shift = 0; shift < width; shift++, bit++)
+                        value |= (uint)((words[bit / 16] >> (int)(bit % 16)) & 1) << shift;
+                    return value;
+                }
+                foreach (var r in ranges)
+                {
+                    if (r.GroupType == 1 && r.BitWidth != 0)
+                    {
+                        // HOK writes its selector/sign AFTER the three values.
+                        float x = r.minimum + ReadBits(r.BitWidth) * r.step;
+                        float y = r.minimum + ReadBits(r.BitWidth) * r.step;
+                        float z = r.minimum + ReadBits(r.BitWidth) * r.step;
+                        uint flags = ReadBits(3);
+                        int omitted = (int)(flags & 3);
+                        double sum = 0;
+                        int stored = 0;
+                        for (int c = 0; c < 4; c++)
+                        {
+                            if (c == omitted) continue;
+                            float value = stored == 0 ? x : stored == 1 ? y : z;
+                            stored++;
+                            result[output + c] = value;
+                            sum += (double)value * value;
+                        }
+                        if (sum > 1.01 || !double.IsFinite(sum))
+                            throw new InvalidDataException("Invalid HOK packed quaternion components.");
+                        result[output + omitted] = (float)Math.Sqrt(Math.Max(0, 1 - sum)) * ((flags & 4) != 0 ? -1 : 1);
+                        output += 4;
+                    }
+                    else
+                    {
+                        for (int c = 0; c < r.Dimension; c++)
+                            result[output++] = r.minimum + ReadBits(r.BitWidth == 0 ? 16 : r.BitWidth) * r.step;
+                    }
+                }
+            }
+            if (result.Any(v => !float.IsFinite(v))) throw new InvalidDataException("Non-finite HOK dense samples.");
+            return result;
         }
         public static DenseClip ParseGI(ObjectReader reader)
         {

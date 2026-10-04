@@ -60,6 +60,19 @@ namespace AssetStudio
             resolvedExternals[key] = (assetsFileList.Count, result);
             return result;
         }
+        internal SerializedFile ResolveHokObjectReference(SerializedFile owner, long pathId)
+        {
+            if (owner.ObjectsDic.ContainsKey(pathId)) return owner;
+            if (string.IsNullOrEmpty(owner.originalPath)) return null;
+            // QTS can split a prefab and its clips into separate SerializedFiles
+            // with GUID-only external slots. A unique PathID in the exact same
+            // source DB is safe to resolve; other DBs/directories never qualify.
+            var matches = assetsFileList.Where(f => string.Equals(f.originalPath, owner.originalPath, StringComparison.OrdinalIgnoreCase)
+                && f.ObjectsDic.ContainsKey(pathId)).Take(2).ToArray();
+            if (matches.Length == 1) return matches[0];
+            if (matches.Length > 1) Logger.Warning($"Ambiguous HOK object reference {pathId} from {owner.fullName}; no target selected.");
+            return null;
+        }
         private SerializedFile ResolveExternalUncached(SerializedFile owner, FileIdentifier external)
         {
             string name = external.fileName;

@@ -1,0 +1,123 @@
+{
+  "build": "1.3.0.3",
+  "displayVersion": "1.3",
+  "date": "2026-10-04",
+  "scope": "Local read-only fixtures; no game compatibility or universal format support claim",
+  "changes": [
+    "Decode HOK variable-bit dense animation values and quaternion omission flags.",
+    "Keep GUID-only PPtr resolution local to the owner or an unambiguous object within the exact same DB.",
+    "Read the HOK split Shader code-block layout without dropping its second blob.",
+    "Validate resource ranges and require complete reads; truncate reused output files.",
+    "Automatically preview AnimationClips using referenced Animation/Animator model hierarchies, bones and available materials; autoplay with pause/resume/seeking.",
+    "Report unsupported particle/property simulation, missing materials and selected repeated-prefab variants.",
+    "In automatic export mode only, preserve raw bytes if semantic conversion fails and report the fallback explicitly.",
+    "Detect a registered per-user installation and allow safe in-place upgrades; reject locked payloads before extraction."
+  ],
+  "verification": {
+    "referenceIsolation": {
+      "passed": 41,
+      "failed": 0
+    },
+    "discoveryRegression": {
+      "passed": 33,
+      "failed": 0,
+      "sample": "19306"
+    },
+    "sourceCoverage": {
+      "passed": 31,
+      "failed": 0,
+      "fixtures": [
+        {
+          "directory": "101",
+          "serializedFiles": 1230,
+          "objectTableRows": 21560,
+          "animations": 54,
+          "packedAnimations": 7
+        },
+        {
+          "directory": "0",
+          "serializedFiles": 36345,
+          "objectTableRows": 38012,
+          "animations": 0
+        },
+        {
+          "directory": "107",
+          "serializedFiles": 6924,
+          "objectTableRows": 33771,
+          "animations": 29
+        }
+      ],
+      "rawObjectRanges": 93343,
+      "typedParserFailures": 0,
+      "note": "Zero typed-parser failures does not mean all objects have complete semantic readers. Partial/raw-only statuses remain visible."
+    },
+    "exports101": {
+      "rawRows": 25273,
+      "pngTextures": 294,
+      "pngSprites": 1,
+      "objMeshes": 663,
+      "animationFiles": 54,
+      "mp3Audio": 11,
+      "wemBankArchives": 1,
+      "failed": 0
+    },
+    "animationPreview101": {
+      "clips": 54,
+      "generatedScenes": 36,
+      "noRelatedModel": 8,
+      "noSupportedTransformTracks": 10,
+      "note": "36 scenes were generated from real object references. They are not claimed to reproduce Unity shaders or particles."
+    },
+    "desktop101": {
+      "folderDragImport": true,
+      "rows": 25273,
+      "spritePreview": true,
+      "animationAutoPlayPauseResume": true,
+      "originalFilesUnchanged": true
+    },
+    "missingResources0": {
+      "textures": 931,
+      "unresolvedExternalImageStreams": 922,
+      "matchingLoadedStreamsInOtherSources": 0,
+      "explicitPngFails": true,
+      "automaticRawFallbackMarked": true,
+      "automaticRawMatchesExplicitRaw": true
+    },
+    "installer": {
+      "pathChecksPassed": 11,
+      "upgradeChecksPassed": 22,
+      "productionRegistryUntouched": true,
+      "cases": [
+        "Unicode/new directories",
+        "registered path auto-detection",
+        "repeated in-place upgrade",
+        "locked later payload rejected before any earlier overwrite",
+        "explicit /D override",
+        "unrelated file collision rejected",
+        "old copy uninstaller preserves new copy registration",
+        "unrelated user files preserved"
+      ]
+    }
+  },
+  "limitations": [
+    "Full Unity ParticleSystem playback is NOT implemented. Particle data remains listed and raw-exportable.",
+    "Animation clips without a resolvable referenced model, or without supported transform tracks, cannot produce a model animation preview.",
+    "The 101 fixture contains no Material objects; its preview warns about missing materials instead of guessing texture assignments.",
+    "922 Texture2D objects in the isolated 0 fixture reference image streams absent from the loaded DBs. Their original object bytes are exportable, but those bytes do not contain the missing pixels.",
+    "HOK Shader parsing preserves split code blobs; complete shader-language reconstruction is not guaranteed.",
+    "Not all 65 local DB directories were tested. Damaged data and unknown layouts cannot be guaranteed to convert.",
+    "Install upgrade detection covers the existing current-user installer registration, not arbitrary portable copies or system-wide installations.",
+    "Rebuild remains experimental and was not validated inside the game."
+  ],
+  "reproducibility": [
+    "dotnet run --project backend/Hok.Reference.Tests -- .",
+    "dotnet run --project backend/Hok.Discovery.Tests -- . <19306-fixture-root>",
+    "dotnet run --project backend/Hok.AssetCoverage.Tests -- <101-folder> <0-folder> <107-folder> --strict",
+    "node tooling/test-asset-exports.cjs <build-folder> <101-folder> --strict",
+    "node tooling/test-folder-import.cjs <101-folder> <build-folder> --animation",
+    "node tooling/test-export-fallback.cjs <build-folder> <0-folder>",
+    "pwsh -File tooling/test-installer-paths.ps1",
+    "pwsh -File tooling/test-installer-upgrade.ps1",
+    "pwsh -File tooling/verify-packages.ps1 -BuildDirectory <build-folder> -ReleaseDirectory <package-folder>"
+  ]
+}

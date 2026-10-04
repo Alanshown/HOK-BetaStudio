@@ -79,4 +79,35 @@ foreach(var order in new[]{new[]{0,1},new[]{1,0}}){
  var lateOwner=Put("late/owner.assets",Serialized("late","shared.assets"));var m=Manager();m.LoadFilesReadOnly(lateOwner);var ptr=new PPtr<TextAsset>(1,777,m.assetsFileList[0]);Check(!ptr.TryGet(out _),"missing reference initially unresolved");
  var late=Put("late/shared.assets",Serialized("late-target"));m.LoadFilesReadOnly(late);Check(ptr.TryGet(out var target)&&target.Name=="late-target","reference cache invalidates when files are added");m.Clear();
 }
+// GUID-only HOK slots: prefer local identity, otherwise require a unique
+// object inside the exact same DB. Unrelated sources never qualify.
+{
+ var ownerPath=Put("guid/owner.assets",Serialized("guid-owner",""));
+ var targetPath=Put("guid/target.assets",Serialized("guid-target"));
+ var foreignPath=Put("foreign/target.assets",Serialized("foreign-target"));
+ var m=Manager();m.LoadFilesReadOnly(ownerPath,targetPath,foreignPath);
+ var owner=m.assetsFileList.Single(f=>f.fullName==ownerPath);
+ var target=m.assetsFileList.Single(f=>f.fullName==targetPath);
+ var foreign=m.assetsFileList.Single(f=>f.fullName==foreignPath);
+ owner.originalPath=target.originalPath=Path.Combine(scratch,"local.db");
+ foreign.originalPath=Path.Combine(scratch,"foreign.db");
+ var pointer=new PPtr<TextAsset>(1,777,owner);
+ Check(pointer.TryGet(out var local)&&local.Name=="guid-owner","GUID-only local object takes priority");
+ owner.ObjectsDic.Remove(777);
+ Check(pointer.TryGet(out var scoped)&&scoped.Name=="guid-target","GUID-only reference resolves unique same-DB target");
+ target.originalPath=foreign.originalPath;
+ Check(!pointer.TryGet(out _),"GUID-only missing target cannot borrow foreign DB objects");
+ target.originalPath=foreign.originalPath=owner.originalPath;
+ Check(!pointer.TryGet(out _),"ambiguous GUID-only same-DB objects are rejected");
+ foreign.originalPath=Path.Combine(scratch,"foreign.db");
+ Check(pointer.TryGet(out var unique)&&unique.Name=="guid-target","GUID-only target re-resolves without stale alias cache");
+ m.Clear();
+}
+// Reusing an output name must not leave stale bytes from a longer export.
+{
+ using var data=new BinaryReader(new MemoryStream(new byte[]{2,4,6}));
+ var output=Put("truncate.bin",new byte[100]);
+ new ResourceReader(data,0,3).WriteData(output);
+ Check(File.ReadAllBytes(output).SequenceEqual(new byte[]{2,4,6}),"resource export truncates an existing longer output");
+}
 Console.WriteLine(JsonSerializer.Serialize(new{passed=results.Count-failed,failed,results,scratch}));Environment.ExitCode=failed==0?0:1;

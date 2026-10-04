@@ -130,5 +130,14 @@
   "parseNotAttempted": "尚未尝试解析",
   "rawLog": "最近的日志行",
   "unknown": "未知",
-  "unknownFiles": "未知 DB 文件"
+  "unknownFiles": "未知 DB 文件",
+  "rawFallback": "转换未完成，已保留原始数据",
+  "animationPlaying": "动画自动播放",
+  "animationVariants": "该片段被多个关联模型/LOD 使用；当前自动选择网格最完整的实例，避免重叠显示。",
+  "animationNoTracks": "此片段没有当前预览器支持的模型变换轨道；不会模拟播放。",
+  "animationTextures": "部分关联贴图缺失或无法解码，当前材质预览不完整。",
+  "animationProperties": "片段包含自定义属性或对象切换轨道，当前预览器仅播放可支持的模型/骨骼轨道。",
+  "animationIncomplete": "组合预览存在限制",
+  "animationParticles": "关联粒子已识别，但当前预览器尚不能还原 Unity 粒子模拟和自定义着色器。",
+  "animationNoModel": "未找到可确认关联的模型；不会自动选择无关模型。原始动画仍可导出。"
 }
