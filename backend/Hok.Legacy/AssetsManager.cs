@@ -25,6 +25,23 @@ namespace AssetStudio
 
         internal Dictionary<string, int> assetsFileIndexCache = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         internal Dictionary<string, BinaryReader> resourceFileReaders = new Dictionary<string, BinaryReader>(StringComparer.OrdinalIgnoreCase);
+        internal Dictionary<string, BinaryReader> scopedResourceReaders = new Dictionary<string, BinaryReader>(StringComparer.OrdinalIgnoreCase);
+        internal HashSet<string> ambiguousResourceNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        internal void RegisterResource(string name, BinaryReader reader, string source)
+        {
+            scopedResourceReaders[source + "|" + name] = reader;
+            if (!resourceFileReaders.TryAdd(name, reader))
+            {
+                ambiguousResourceNames.Add(name);
+                Logger.Warning($"Resource alias {name} occurs in several sources; package-qualified lookup is required.");
+            }
+        }
+        internal bool TryGetResource(SerializedFile file, string name, out BinaryReader reader)
+        {
+            if (scopedResourceReaders.TryGetValue((file.originalPath ?? file.fullName) + "|" + name, out reader)) return true;
+            if (ambiguousResourceNames.Contains(name)) { reader = null; return false; }
+            return resourceFileReaders.TryGetValue(name, out reader);
+        }
 
         internal List<string> importFiles = new List<string>();
         internal HashSet<string> importFilesHash = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -92,7 +109,8 @@ namespace AssetStudio
             //use a for loop because list size can change
             for (var i = 0; i < importFiles.Count; i++)
             {
-                LoadFile(importFiles[i]);
+                try { LoadFile(importFiles[i]); }
+                catch (Exception e) { Logger.Error($"Unable to open {importFiles[i]}; continuing with other inputs", e); }
                 Progress.Report(i + 1, importFiles.Count);
                 if (tokenSource.IsCancellationRequested)
                 {
@@ -155,12 +173,19 @@ namespace AssetStudio
                 case FileType.QtsVFSFile:
                     LoadQtsVFS(reader);
                     break;
+                default:
+                    Logger.Warning($"Unsupported top-level file {reader.FullPath} ({reader.FileType}); preserving raw bytes only");
+                    if (reader.Length > 512L * 1024 * 1024) { reader.Dispose(); throw new InvalidDataException("Raw resource exceeds 512 MiB limit"); }
+                    reader.Position = 0;
+                    ContainerEntries.Add(new ContainerEntry(reader.FileName, reader.FullPath, reader.ReadBytes((int)reader.Length), "UnparsedFile", "No typed container parser; raw source retained."));
+                    reader.Dispose();
+                    break;
             }
         }
 
         private void LoadAssetsFile(FileReader reader)
         {
-            if (!assetsFileListHash.Contains(reader.FileName))
+            if (!assetsFileListHash.Contains(reader.FullPath))
             {
                 Logger.Info($"Loading {reader.FullPath}");
                 try
@@ -168,7 +193,9 @@ namespace AssetStudio
                     var assetsFile = new SerializedFile(reader, this);
                     CheckStrippedVersion(assetsFile);
                     assetsFileList.Add(assetsFile);
-                    assetsFileListHash.Add(assetsFile.fileName);
+                    assetsFileListHash.Add(reader.FullPath);
+                    if (assetsFileList.Count(f => f.fileName.Equals(assetsFile.fileName, StringComparison.OrdinalIgnoreCase)) > 1)
+                        Logger.Warning($"Distinct SerializedFiles share name {assetsFile.fileName}; preserving all source identities. External references must resolve unambiguously.");
 
                     foreach (var sharedFile in assetsFile.m_Externals)
                     {
@@ -226,7 +253,7 @@ namespace AssetStudio
         private void LoadAssetsFromMemory(FileReader reader, string originalPath, string unityVersion = null, long originalOffset = 0)
         {
             Logger.Verbose($"Loading asset file {reader.FileName} with version {unityVersion} from {originalPath} at offset 0x{originalOffset:X8}");
-            if (!assetsFileListHash.Contains(reader.FileName))
+            if (!assetsFileListHash.Contains(reader.FullPath))
             {
                 try
                 {
@@ -239,7 +266,9 @@ namespace AssetStudio
                     }
                     CheckStrippedVersion(assetsFile);
                     assetsFileList.Add(assetsFile);
-                    assetsFileListHash.Add(assetsFile.fileName);
+                    assetsFileListHash.Add(reader.FullPath);
+                    if (assetsFileList.Count(f => f.fileName.Equals(assetsFile.fileName, StringComparison.OrdinalIgnoreCase)) > 1)
+                        Logger.Warning($"Distinct SerializedFiles share name {assetsFile.fileName}; preserving all source identities. External references must resolve unambiguously.");
                 }
                 catch (Exception e)
                 {
@@ -262,7 +291,7 @@ namespace AssetStudio
                 var bundleFile = new BundleFile(reader, Game);
                 foreach (var file in bundleFile.fileList)
                 {
-                    var dummyPath = Path.Combine(Path.GetDirectoryName(reader.FullPath), file.fileName);
+                    var dummyPath = Path.Combine(reader.FullPath + ".entries", file.fileName);
                     var subReader = new FileReader(dummyPath, file.stream);
                     if (subReader.FileType == FileType.AssetsFile)
                     {
@@ -302,7 +331,7 @@ namespace AssetStudio
                 var webFile = new WebFile(reader);
                 foreach (var file in webFile.fileList)
                 {
-                    var dummyPath = Path.Combine(Path.GetDirectoryName(reader.FullPath), file.fileName);
+                    var dummyPath = Path.Combine(reader.FullPath + ".entries", file.fileName);
                     var subReader = new FileReader(dummyPath, file.stream);
                     switch (subReader.FileType)
                     {
@@ -515,7 +544,7 @@ namespace AssetStudio
                 Logger.Verbose($"mhy total size: {mhyFile.m_Header.size:X8}");
                 foreach (var file in mhyFile.fileList)
                 {
-                    var dummyPath = Path.Combine(Path.GetDirectoryName(reader.FullPath), file.fileName);
+                    var dummyPath = Path.Combine(reader.FullPath + ".entries", file.fileName);
                     var cabReader = new FileReader(dummyPath, file.stream);
                     if (cabReader.FileType == FileType.AssetsFile)
                     {
@@ -561,9 +590,16 @@ namespace AssetStudio
                 foreach (var entry in qtsVFS.Entries)
                 {
                     var fileId = entry.Key;
-                    // Index databases can contain tombstone/metadata records with
-                    // no payload. They are not compressed files and must not be
-                    // passed to the LZ4 decoder.
+                    // Zero decoded-length records may contain real index metadata.
+                    // Retain every stored byte without guessing its semantic meaning.
+                    foreach (var metadata in entry.Value.Where(c => c.UncompressedSize == 0))
+                    {
+                        reader.Position = metadata.Offset;
+                        var raw = reader.ReadBytes(metadata.CompressedSize);
+                        if (raw.Length != metadata.CompressedSize) throw new EndOfStreamException("Short metadata record");
+                        ContainerEntries.Add(new ContainerEntry(fileId + "-metadata-" + metadata.Offset,
+                            reader.FullPath, raw, "QtsRawMetadata", null, metadata.Offset, metadata.UncompressedSize));
+                    }
                     var chunks = entry.Value.Where(c => c.UncompressedSize > 0).ToList();
                     if (chunks.Count == 0)
                     {
@@ -575,9 +611,26 @@ namespace AssetStudio
                         int result = a.MainBlock.CompareTo(b.MainBlock);
                         return result != 0 ? result : a.SubBlock.CompareTo(b.SubBlock);
                     });
-                    var dummyPath = Path.Combine(Path.GetDirectoryName(reader.FullPath), fileId.ToString());
+                    var dummyPath = Path.Combine(reader.FullPath + ".entries", fileId.ToString());
                     try
                     {
+                    if (chunks.Count == 1)
+                    {
+                        var chunk = chunks[0];
+                        reader.Position = chunk.Offset;
+                        var marker = reader.ReadBytes(Math.Min(chunk.CompressedSize, 12));
+                        if (marker.AsSpan().StartsWith("QTSF_PACKAGE"u8))
+                        {
+                            if (chunk.CompressedSize < chunk.UncompressedSize)
+                                throw new InvalidDataException("Raw package record is shorter than its declared marker/payload length");
+                            reader.Position = chunk.Offset;
+                            var package = reader.ReadBytes(chunk.CompressedSize);
+                            if (package.Length != chunk.CompressedSize) throw new EndOfStreamException("Short package metadata");
+                            ContainerEntries.Add(new ContainerEntry(fileId.ToString(), reader.FullPath, package,
+                                "QtsPackageMetadata", null, chunk.Offset, chunk.UncompressedSize));
+                            continue;
+                        }
+                    }
                     var totalSize = chunks.Sum(c => (long)c.UncompressedSize);
                     if (totalSize <= 0 || totalSize > 512L * 1024 * 1024)
                         throw new InvalidDataException($"QTS entry {fileId} exceeds the 512 MiB decoding limit");
@@ -605,9 +658,9 @@ namespace AssetStudio
                         {
                             // QTS package metadata is stored verbatim even though
                             // it uses the same entry table as compressed payloads.
-                            if (compressed.Length < decompressedChunk.Length)
+                            if (compressed.Length != decompressedChunk.Length)
                             {
-                                throw new InvalidDataException($"Raw QTS package entry {fileId} is shorter than expected");
+                                throw new InvalidDataException($"Raw QTS package entry {fileId} has ambiguous mixed-block length");
                             }
                             compressed.AsSpan(0, decompressedChunk.Length).CopyTo(decompressedChunk);
                             numWrite = decompressedChunk.Length;
@@ -617,6 +670,8 @@ namespace AssetStudio
                             numWrite = LZ4.Instance.Decompress(compressed, decompressedChunk);
                         }
 
+                        if (numWrite != chunk.UncompressedSize)
+                            throw new InvalidDataException($"QTS entry {fileId} block wrote {numWrite} bytes; expected {chunk.UncompressedSize}");
                         decompressedOffset += numWrite;
                     }
 
@@ -630,12 +685,19 @@ namespace AssetStudio
                     ContainerEntries.Add(new ContainerEntry(fileId.ToString(), reader.FullPath, decompressed, entryReader.FileType.ToString()));
                     if (entryReader.FileType == FileType.AssetsFile)
                     {
-                        LoadAssetsFile(entryReader);
+                        LoadAssetsFromMemory(entryReader, reader.FullPath);
+                        var loaded = assetsFileList.LastOrDefault(f => f.fullName == dummyPath);
+                        if (loaded != null) loaded.containerEntryId = fileId.ToString();
                     }
                     else
                     {
+                        // Some QTS entries contain an exact sequence of standalone
+                        // SerializedFiles, rather than one file or a resource stream.
+                        // Retain the complete original entry and additionally load
+                        // validated slices; never scan arbitrary payloads for magic.
+                        TryLoadQtsSerializedSequence(decompressed, dummyPath, reader.FullPath);
                         Logger.Verbose("Caching resource stream");
-                        resourceFileReaders.TryAdd(fileId.ToString(), entryReader); //TODO
+                        RegisterResource(fileId.ToString(), entryReader, reader.FullPath);
                     }
                     }
                     catch (Exception entryError)
@@ -671,6 +733,43 @@ namespace AssetStudio
             }
         }
         
+        private bool TryLoadQtsSerializedSequence(byte[] data, string basePath, string originalPath)
+        {
+            var slices = new List<(int Offset, int Size)>();
+            int offset = 0;
+            string issue = null;
+            while (offset < data.Length)
+            {
+                if (data.Length - offset < 20 || slices.Count >= 100000) { issue = "short trailing header or slice limit"; break; }
+                var header = data.AsSpan(offset);
+                uint version = System.Buffers.Binary.BinaryPrimitives.ReadUInt32BigEndian(header.Slice(8, 4));
+                if (version < 9 || version > 22 || header[16] > 1) { issue = "unsupported trailing header"; break; }
+                int headerSize = version == 22 ? 48 : 20;
+                if (header.Length < headerSize) { issue = "truncated trailing header"; break; }
+                uint metadataSize = System.Buffers.Binary.BinaryPrimitives.ReadUInt32BigEndian(header.Slice(version == 22 ? 20 : 0, 4));
+                long size = version == 22 ? System.Buffers.Binary.BinaryPrimitives.ReadInt64BigEndian(header.Slice(24, 8)) : System.Buffers.Binary.BinaryPrimitives.ReadUInt32BigEndian(header.Slice(4, 4));
+                long dataOffset = version == 22 ? System.Buffers.Binary.BinaryPrimitives.ReadInt64BigEndian(header.Slice(32, 8)) : System.Buffers.Binary.BinaryPrimitives.ReadUInt32BigEndian(header.Slice(12, 4));
+                if (size < headerSize || size > data.Length - offset || dataOffset < headerSize || dataOffset > size || metadataSize > dataOffset - headerSize)
+                { issue = "invalid/truncated trailing SerializedFile range"; break; }
+                slices.Add((offset, (int)size));
+                offset += (int)size;
+            }
+            if (slices.Count == 0) return false;
+            if (offset != data.Length)
+                Logger.Warning($"QTS SerializedFile sequence {basePath}: retained {slices.Count} validated prefix file(s), but {data.Length-offset} trailing bytes at offset {offset} are unparsed ({issue}). Complete original container remains exportable.");
+            for (int index = 0; index < slices.Count; index++)
+            {
+                var slice = slices[index];
+                var partData = data.AsSpan(slice.Offset, slice.Size).ToArray();
+                var partReader = new FileReader(basePath + "-part-" + index, new MemoryStream(partData));
+                if (partReader.FileType != FileType.AssetsFile) { partReader.Dispose(); continue; }
+                LoadAssetsFromMemory(partReader, originalPath, originalOffset: slice.Offset);
+                var loaded = assetsFileList.LastOrDefault(f => f.fullName == partReader.FullPath);
+                if (loaded != null) { loaded.containerEntryId = Path.GetFileName(basePath); loaded.containerByteOffset = slice.Offset; }
+            }
+            return true;
+        }
+
         private void LoadBlbFile(FileReader reader, string originalPath = null, long originalOffset = 0, bool log = true)
         {
             if (log)
@@ -682,7 +781,7 @@ namespace AssetStudio
                 var blbFile = new BlbFile(reader, reader.FullPath);
                 foreach (var file in blbFile.fileList)
                 {
-                    var dummyPath = Path.Combine(Path.GetDirectoryName(reader.FullPath), file.fileName);
+                    var dummyPath = Path.Combine(reader.FullPath + ".entries", file.fileName);
                     var cabReader = new FileReader(dummyPath, file.stream);
                     if (cabReader.FileType == FileType.AssetsFile)
                     {
@@ -737,6 +836,9 @@ namespace AssetStudio
             {
                 resourceFileReader.Value.Close();
             }
+            foreach (var resource in scopedResourceReaders.Values) resource.Close();
+            scopedResourceReaders.Clear();
+            ambiguousResourceNames.Clear();
             resourceFileReaders.Clear();
             ContainerEntries.Clear();
 
@@ -765,9 +867,12 @@ namespace AssetStudio
                         Logger.Info("Reading assets has been cancelled !!");
                         return;
                     }
-                    var objectReader = new ObjectReader(assetsFile.reader, assetsFile, objectInfo, Game);
+                    ObjectReader objectReader = null;
+                    var status = new ObjectParseStatus { Status = "parser-failed", RemainingBytes = objectInfo.byteSize };
+                    assetsFile.ParseStatuses[objectInfo.m_PathID] = status;
                     try
                     {
+                        objectReader = new ObjectReader(assetsFile.reader, assetsFile, objectInfo, Game);
                         Object obj = objectReader.type switch
                         {
                             ClassIDType.Animation when ClassIDType.Animation.CanParse() => new Animation(objectReader),
@@ -802,19 +907,31 @@ namespace AssetStudio
                             ClassIDType.ResourceManager when ClassIDType.ResourceManager.CanParse() => new ResourceManager(objectReader),
                             _ => new Object(objectReader),
                         };
+                        status.Parser = obj.GetType().Name;
+                        status.Typed = obj.GetType() != typeof(Object);
+                        status.ConsumedBytes = objectReader.Position - objectInfo.byteStart;
+                        status.RemainingBytes = objectInfo.byteSize - status.ConsumedBytes;
+                        if (status.RemainingBytes < 0) throw new InvalidDataException("Parser crossed the object boundary");
+                        status.Status = !status.Typed ? (objectReader.type.CanParse() ? "generic-raw" : "parser-disabled")
+                            : status.RemainingBytes == 0 ? "typed-complete" : "typed-partial";
                         assetsFile.AddObject(obj);
                     }
                     catch (Exception e)
                     {
+                        status.Status = "parser-failed";
+                        status.Typed = false;
+                        status.Error = e.GetBaseException().Message;
+                        status.ConsumedBytes = objectReader == null ? 0 : objectReader.Position - objectInfo.byteStart;
+                        status.RemainingBytes = objectInfo.byteSize - status.ConsumedBytes;
                         var sb = new StringBuilder();
                         sb.AppendLine("Unable to load object")
                             .AppendLine($"Assets {assetsFile.fileName}")
                             .AppendLine($"Path {assetsFile.originalPath}")
-                            .AppendLine($"Type {objectReader.type}")
+                            .AppendLine($"Type {ObjectParseStatus.ClassName(objectInfo.classID)}")
                             .AppendLine($"PathID {objectInfo.m_PathID}")
-                            .AppendLine($"ByteStart 0x{objectReader.byteStart:X8}")
-                            .AppendLine($"CurrentPosition 0x{objectReader.Position:X8}")
-                            .AppendLine($"ObjectOffset 0x{objectReader.Position - objectReader.byteStart:X8}")
+                            .AppendLine($"ByteStart 0x{objectInfo.byteStart:X8}")
+                            .AppendLine($"CurrentPosition 0x{assetsFile.reader.Position:X8}")
+                            .AppendLine($"ObjectOffset 0x{status.ConsumedBytes:X8}")
                             .Append(e);
                         Logger.Error(sb.ToString());
                     }

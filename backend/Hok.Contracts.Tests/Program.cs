@@ -38,4 +38,25 @@ var overlap=Scanner.Scan([recursiveRoot,nested,shard],CancellationToken.None);
 if(overlap.Files.Count!=14||overlap.Files.Select(f=>f.Path).Distinct().Count()!=14)throw new Exception("Overlapping folder imports duplicated DBs");
 using var cancelled=new CancellationTokenSource();cancelled.Cancel();
 try{Scanner.Scan([recursiveRoot],cancelled.Token);throw new Exception("Cancelled scan continued");}catch(OperationCanceledException){}
+// Arbitrary DB names still enter the exact same parser/preview/export pipeline.
+var arbitraryRoot=Path.Combine(temp,"arbitrary");Directory.CreateDirectory(arbitraryRoot);
+foreach(var folder in new[]{"a","b"}){
+ var directory=Path.Combine(arbitraryRoot,folder);Directory.CreateDirectory(directory);
+ foreach(var filename in new[]{"0.db","0_0.db","中文资源.db","中文资源_12.DB"})File.WriteAllBytes(Path.Combine(directory,filename),[1,2,3]);
+ File.WriteAllText(Path.Combine(directory,"record.bytes"),"not a DB");
+ File.WriteAllBytes(Path.Combine(directory,"sound"),[1,0,0,2,1,2,3,4]);
+ File.WriteAllText(Path.Combine(directory,"notes"),"not a recognized container");
+}
+var arbitrary=Scanner.Scan([arbitraryRoot],CancellationToken.None);
+if(arbitrary.Files.Count!=10||arbitrary.Files.Any(f=>f.HeroId!=""||!f.SkinId.StartsWith("unknown:")))throw new Exception("Arbitrary DB files excluded or misclassified");
+if(arbitrary.Files.Select(f=>f.SkinId).Distinct().Count()!=6)throw new Exception("Unknown packages from different directories merged");
+var zero=arbitrary.Files.First(f=>f.Name=="0.db");
+var zeroGroup=Scanner.SelectPackageFiles(arbitrary.Files,zero.SkinId,zero.Id);
+if(zeroGroup.Length!=2||zeroGroup[0].Name!="0.db"||zeroGroup[1].Name!="0_0.db")throw new Exception("Unknown package shard association");
+var repeated=Scanner.Scan([arbitraryRoot,zero.Path],CancellationToken.None);
+if(repeated.Files.Count!=10||!repeated.Files.Select(f=>f.SkinId).SequenceEqual(arbitrary.Files.Select(f=>f.SkinId)))throw new Exception("Unstable unknown identity or duplicate import");
+if(Identity.ParsePackage("texture_pack_12.db") is not {Stem:"texture_pack",Shard:"12",HeroId:""})throw new Exception("Arbitrary name suffix parsing");
+if(Identity.ParsePackage("notes.txt") is not null||Identity.ParsePackage("0") is not null)throw new Exception("Unsigned unrelated files accepted");
+if(Scanner.SelectPackageFiles(arbitrary.Files,zero.SkinId,zeroGroup[1].Id).Length!=2)throw new Exception("Selecting shard must load its complete group");
+Console.WriteLine("PASS 7 arbitrary-name/grouping regressions; unknown DB names retain full asset functionality");
 Console.WriteLine(JsonSerializer.Serialize(new{passed=count+9,filenameVectors=count,extensionlessSignature=true,stableFallback=true,scannerUnknownAndDedup=true,readOnly=true,recursiveLevels=12,recursiveFiles=nestedScan.Files.Count,recursiveIdentityAndShards=true,workspaceRootPreserved=true,overlappingFoldersDeduplicated=true,cancellation=true,fixtureDirectory=temp}));

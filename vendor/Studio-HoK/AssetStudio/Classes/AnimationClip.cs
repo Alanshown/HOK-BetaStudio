@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -212,9 +212,16 @@ namespace AssetStudio
             int indexPos = bitPos / 8;
             bitPos %= 8;
 
-            float scale = 1.0f / m_Range;
             if (numChunks == -1)
                 numChunks = (int)m_NumItems / itemCountInChunk;
+            // Preserve the tested scene-mesh constant packed-vector fix.
+            if (m_BitSize == 0 && m_Range == 0f && m_Data.Length == 0 && float.IsFinite(m_Start))
+            {
+                var constants = new float[checked(numChunks * itemCountInChunk)];
+                Array.Fill(constants, m_Start);
+                return constants;
+            }
+            float scale = 1.0f / m_Range;
             var end = chunkStride * numChunks / 4;
             var data = new List<float>();
             for (var index = 0; index != end; index += chunkStride / 4)
@@ -1075,6 +1082,67 @@ namespace AssetStudio
         }
     }
 
+    public static class HokAnimationLayout
+    {
+        public static bool Applies(ObjectReader reader) => reader.Game.Type.IsHonorOfKings()
+            && reader.version.Length >= 3 && reader.version[0] == 2022
+            && reader.version[1] == 3 && reader.version[2] == 5;
+    }
+
+    public class HokDenseRange
+    {
+        public float minimum;
+        public float step;
+        public uint kind;
+        public int Dimension => kind == 1 ? 4 : kind == 2 ? 3 : kind == 3 ? 1 : throw new InvalidDataException("Unknown HOK dense group kind.");
+        public HokDenseRange(ObjectReader reader) { minimum = reader.ReadSingle(); step = reader.ReadSingle(); kind = reader.ReadUInt32(); }
+    }
+
+    public class HokLegacyBinding
+    {
+        public string attribute;
+        public PPtr<Object> script;
+        public int classID;
+        public uint hash;
+        public string path;
+        public HokLegacyBinding(ObjectReader reader)
+        {
+            attribute = reader.ReadAlignedString(); script = new PPtr<Object>(reader);
+            classID = reader.ReadInt32(); hash = reader.ReadUInt32();
+        }
+    }
+
+    public class HokLegacyAnimation
+    {
+        public uint sizeField;
+        public Clip clip;
+        public uint? unknownWord;
+        public float startTime;
+        public float stopTime;
+        public string[] names;
+        public int[] pathIndices;
+        public List<HokLegacyBinding> bindings;
+        public HokLegacyAnimation(ObjectReader reader)
+        {
+            sizeField = reader.ReadUInt32(); clip = new Clip(reader);
+            // The nonempty legacy section has one additional word, retained without interpreting it.
+            if (sizeField != 0) unknownWord = reader.ReadUInt32();
+            startTime = reader.ReadSingle(); stopTime = reader.ReadSingle();
+            names = reader.ReadStringArray(); pathIndices = reader.ReadInt32Array();
+            int count = reader.ReadInt32();
+            if (count < 0 || count > reader.byteSize / 24) throw new InvalidDataException("Invalid HOK legacy binding count.");
+            bindings = new List<HokLegacyBinding>();
+            var paths = new List<string>(); var path = new List<string>();
+            foreach (int index in pathIndices)
+            {
+                if (index == -1) { paths.Add(string.Join("/", path)); path.Clear(); }
+                else { if (index < 0 || index >= names.Length) throw new InvalidDataException("Invalid HOK legacy path index."); path.Add(names[index]); }
+            }
+            if (path.Count != 0 || paths.Count != count) throw new InvalidDataException("HOK legacy paths/bindings mismatch.");
+            for (int i = 0; i < count; i++) { var b = new HokLegacyBinding(reader); b.path = paths[i]; bindings.Add(b); }
+        }
+    }
+
     public class DenseClip
     {
         public int m_FrameCount;
@@ -1082,6 +1150,8 @@ namespace AssetStudio
         public float m_SampleRate;
         public float m_BeginTime;
         public float[] m_SampleArray;
+        public ushort[] m_HokCompressedSamples;
+        public List<HokDenseRange> m_HokRanges;
         public DenseClip() { }
 
         public DenseClip(ObjectReader reader)
@@ -1091,6 +1161,24 @@ namespace AssetStudio
             m_SampleRate = reader.ReadSingle();
             m_BeginTime = reader.ReadSingle();
             m_SampleArray = reader.ReadSingleArray();
+            if (HokAnimationLayout.Applies(reader))
+            {
+                m_HokCompressedSamples = reader.ReadUInt16Array(); reader.AlignStream();
+                int count = reader.ReadInt32();
+                if (count < 0 || count > reader.byteSize / 12) throw new InvalidDataException("Invalid HOK range count.");
+                m_HokRanges = new List<HokDenseRange>();
+                for (int i = 0; i < count; i++) m_HokRanges.Add(new HokDenseRange(reader));
+                if (m_HokCompressedSamples.Length > 0)
+                {
+                    if (m_SampleArray.Length != 0) throw new InvalidDataException("Both HOK dense encodings are populated.");
+                    var ranges = m_HokRanges.SelectMany(x => Enumerable.Repeat(x, x.Dimension)).ToArray();
+                    if (ranges.Length != m_CurveCount || (long)m_FrameCount * m_CurveCount != m_HokCompressedSamples.Length)
+                        throw new InvalidDataException("HOK dense sample dimensions mismatch.");
+                    m_SampleArray = new float[m_HokCompressedSamples.Length];
+                    for (int i = 0; i < m_SampleArray.Length; i++)
+                    { var range = ranges[i % ranges.Length]; m_SampleArray[i] = range.minimum + m_HokCompressedSamples[i] * range.step; }
+                }
+            }
         }
         public static DenseClip ParseGI(ObjectReader reader)
         {
@@ -1310,6 +1398,7 @@ namespace AssetStudio
         public DenseClip m_DenseClip;
         public ConstantClip m_ConstantClip;
         public ValueArrayConstant m_Binding;
+        public byte[] m_HokUnknownExtension;
         public Clip() { }
 
         public Clip(ObjectReader reader)
@@ -1347,6 +1436,7 @@ namespace AssetStudio
             {
                 m_Binding = new ValueArrayConstant(reader);
             }
+            if (HokAnimationLayout.Applies(reader)) m_HokUnknownExtension = reader.ReadBytes(36);
         }
         public static Clip ParseGI(ObjectReader reader)
         {
@@ -1831,6 +1921,8 @@ namespace AssetStudio
         public AnimationClipBindingConstant m_ClipBindingConstant;
         public List<AnimationEvent> m_Events;
         public StreamingInfo m_StreamData;
+        public HokLegacyAnimation m_HokLegacyAnimation;
+        public byte[] m_HokUnknownTrailing;
 
         private bool hasStreamingInfo = false;
 
@@ -1939,6 +2031,7 @@ namespace AssetStudio
             {
                 m_Bounds = new AABB(reader);
             }
+            if (HokAnimationLayout.Applies(reader)) m_HokLegacyAnimation = new HokLegacyAnimation(reader);
             if (version[0] >= 4)//4.0 and up
             {
                 if (reader.Game.Type.IsGI())
@@ -1994,6 +2087,12 @@ namespace AssetStudio
             if (version[0] >= 2017) //2017 and up
             {
                 reader.AlignStream();
+            }
+            if (HokAnimationLayout.Applies(reader))
+            {
+                long remaining = reader.byteStart + reader.byteSize - reader.Position;
+                if (remaining < 0 || remaining > int.MaxValue) throw new InvalidDataException("HOK animation crossed object boundary.");
+                m_HokUnknownTrailing = reader.ReadBytes((int)remaining);
             }
             if (hasStreamingInfo)
             {

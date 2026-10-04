@@ -1,6 +1,7 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace AssetStudio
 {
@@ -55,11 +56,12 @@ namespace AssetStudio
                 {
                     var m_External = assetsFile.m_Externals[m_FileID - 1];
                     var name = m_External.fileName;
-                    if (!assetsFileIndexCache.TryGetValue(name, out index))
-                    {
-                        index = assetsFileList.FindIndex(x => x.fileName.Equals(name, StringComparison.OrdinalIgnoreCase));
-                        assetsFileIndexCache.Add(name, index);
-                    }
+                    // Basename alone is not a unique identity across loaded packages.
+                    var matches = assetsFileList.Select((file, at) => (file, at)).Where(x => x.file.fileName.Equals(name, StringComparison.OrdinalIgnoreCase)).ToArray();
+                    var local = matches.Where(x => (x.file.originalPath ?? x.file.fullName) == (assetsFile.originalPath ?? assetsFile.fullName)).ToArray();
+                    index = local.Length == 1 ? local[0].at : matches.Length == 1 ? matches[0].at : -1;
+                    if (matches.Length > 1 && local.Length != 1)
+                        Logger.Warning($"Ambiguous external SerializedFile {name} from {assetsFile.fullName}; reference {m_FileID}/{m_PathID} was not guessed.");
                 }
 
                 if (index >= 0)

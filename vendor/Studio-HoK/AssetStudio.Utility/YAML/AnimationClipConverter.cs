@@ -18,6 +18,8 @@ namespace AssetStudio
         private readonly Game game;
         private readonly AnimationClip animationClip;
         private readonly CustomCurveResolver m_customCurveResolver;
+        private Clip activeClip;
+        private readonly Dictionary<GenericBinding, HokLegacyBinding> hokBindings = new Dictionary<GenericBinding, HokLegacyBinding>();
 
         private readonly Dictionary<Vector3Curve, List<Keyframe<Vector3>>> m_translations = new Dictionary<Vector3Curve, List<Keyframe<Vector3>>>();
         private readonly Dictionary<QuaternionCurve, List<Keyframe<Quaternion>>> m_rotations = new Dictionary<QuaternionCurve, List<Keyframe<Quaternion>>>();
@@ -48,7 +50,14 @@ namespace AssetStudio
         }
         private void ProcessInner()
         {
+            if (animationClip.m_Legacy && animationClip.m_HokLegacyAnimation?.bindings.Count > 0)
+            {
+                ProcessHokLegacy(animationClip.m_HokLegacyAnimation);
+                CreateCurves();
+                return;
+            }
             var m_Clip = animationClip.m_MuscleClip.m_Clip;
+            activeClip = m_Clip;
             var bindings = animationClip.m_ClipBindingConstant;
             var tos = animationClip.FindTOS();
 
@@ -76,6 +85,34 @@ namespace AssetStudio
                 ProcessConstant(m_Clip, bindings, tos, lastFrame);
             }
             CreateCurves();
+        }
+
+        private void ProcessHokLegacy(HokLegacyAnimation legacy)
+        {
+            activeClip = legacy.clip;
+            var bindings = new AnimationClipBindingConstant { genericBindings = new List<GenericBinding>(), pptrCurveMapping = new List<PPtr<Object>>() };
+            var paths = new Dictionary<uint, string>();
+            int dimensions = 0;
+            foreach (var source in legacy.bindings)
+            {
+                uint path = (uint)paths.Count;
+                paths.Add(path, source.path);
+                bool transform = source.classID == -1;
+                uint attribute = 0;
+                if (transform && (!uint.TryParse(source.attribute, out attribute) || attribute < 1 || attribute > 4))
+                    throw new System.IO.InvalidDataException("Unsupported HOK transform binding: " + source.attribute);
+                var binding = new GenericBinding { path = path, attribute = attribute, typeID = transform ? ClassIDType.Transform : (ClassIDType)source.classID, script = source.script, version = animationClip.version };
+                bindings.genericBindings.Add(binding);
+                hokBindings.Add(binding, source);
+                dimensions += transform ? binding.GetDimension() : 1;
+            }
+            var dense = activeClip.m_DenseClip;
+            long expected = (long)activeClip.m_StreamedClip.curveCount + dense.m_CurveCount + (activeClip.m_ConstantClip?.data.Length ?? 0);
+            if (dimensions != expected || activeClip.m_ACLClip.IsSet)
+                throw new System.IO.InvalidDataException("HOK legacy binding/sample dimensions do not match.");
+            ProcessStreams(activeClip.m_StreamedClip.ReadData(), bindings, paths, animationClip.m_SampleRate);
+            ProcessDenses(activeClip, bindings, paths);
+            if (activeClip.m_ConstantClip != null) ProcessConstant(activeClip, bindings, paths, legacy.stopTime);
         }
 
         private void CreateCurves()
@@ -112,7 +149,7 @@ namespace AssetStudio
                     var curve = frame.keyList[curveIndex];
                     var index = curve.index;
                     if (!game.Type.IsSRGroup())
-                        index += (int)animationClip.m_MuscleClip.m_Clip.m_ACLClip.CurveCount;
+                        index += (int)activeClip.m_ACLClip.CurveCount;
                     var binding = bindings.FindBinding(index);
 
                     var path = GetCurvePath(tos, binding.path);
@@ -136,7 +173,12 @@ namespace AssetStudio
                     }
                     else if ((BindingCustomType)binding.customType == BindingCustomType.None)
                     {
-                        AddDefaultCurve(binding, path, frame.time, frame.keyList[curveIndex].value);
+                        if (hokBindings.TryGetValue(binding, out var source))
+                        {
+                            var key = frame.keyList[curveIndex];
+                            AddFloatKeyframe(new FloatCurve(path, source.attribute, binding.typeID, source.script.Cast<MonoScript>()), frame.time, key.value, key.inSlope, key.outSlope);
+                        }
+                        else AddDefaultCurve(binding, path, frame.time, frame.keyList[curveIndex].value);
                         curveIndex = GetNextCurve(frame, curveIndex);
                     }
                     else
@@ -155,7 +197,7 @@ namespace AssetStudio
             var slopeValues = new float[4]; // no slopes - 0 values
             for (var frameIndex = 0; frameIndex < dense.m_FrameCount; frameIndex++)
             {
-                var time = frameIndex / dense.m_SampleRate;
+                var time = dense.m_BeginTime + frameIndex / dense.m_SampleRate;
                 var frameOffset = frameIndex * (int)dense.m_CurveCount;
                 for (var curveIndex = 0; curveIndex < dense.m_CurveCount;)
                 {
@@ -409,6 +451,11 @@ namespace AssetStudio
 
         private void AddDefaultCurve(GenericBinding binding, string path, float time, float value)
         {
+            if (hokBindings.TryGetValue(binding, out var source))
+            {
+                AddFloatKeyframe(new FloatCurve(path, source.attribute, binding.typeID, source.script.Cast<MonoScript>()), time, value);
+                return;
+            }
             switch (binding.typeID)
             {
                 case ClassIDType.GameObject:
@@ -465,7 +512,7 @@ namespace AssetStudio
             AddFloatKeyframe(curve, time, value);
         }
 
-        private void AddFloatKeyframe(FloatCurve curve, float time, float value)
+        private void AddFloatKeyframe(FloatCurve curve, float time, float value, float inSlope = 0, float outSlope = 0)
         {
             if (!m_floats.TryGetValue(curve, out List<Keyframe<Float>> floatCurve))
             {
@@ -473,7 +520,7 @@ namespace AssetStudio
                 m_floats.Add(curve, floatCurve);
             }
 
-            Keyframe<Float> floatKey = new Keyframe<Float>(time, value, default, default, AnimationClipExtensions.DefaultFloatWeight);
+            Keyframe<Float> floatKey = new Keyframe<Float>(time, value, inSlope, outSlope, AnimationClipExtensions.DefaultFloatWeight);
             floatCurve.Add(floatKey);
         }
 

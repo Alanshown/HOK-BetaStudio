@@ -113,8 +113,7 @@ internal sealed class MainWindow:Window {
    }
    case "load":{
     string skinId=p.GetProperty("skinId").GetString()!;string? dbId=p.TryGetProperty("dbId",out var d)?d.GetString():null;
-    var selected=files.Where(f=>f.SkinId==skinId).ToArray();if(selected.Length==0)throw new InvalidOperationException("No DB for this skin");
-    if(dbId is not null){var db=selected.Single(f=>f.Id==dbId);selected=selected.Where(f=>f.Root==db.Root&&f.Stem==db.Stem).ToArray();}
+    var selected=Scanner.SelectPackageFiles(files,skinId,dbId);
     foreach(var f in selected){var fi=new FileInfo(f.Path);if(!fi.Exists||$"{fi.Length}:{fi.LastWriteTimeUtc.Ticks}"!=f.Fingerprint)throw new IOException("Source file changed; open the workspace again.");}
     previewEpoch++;previewWorker.Cancel();previewGeneration=-1;activeFiles=[];var version=++generation;
     var result=await worker.Call("load",new{paths=selected.Select(f=>f.Path).ToArray()});if(version!=generation)throw new OperationCanceledException();activeFiles=selected;return new{generation,result};

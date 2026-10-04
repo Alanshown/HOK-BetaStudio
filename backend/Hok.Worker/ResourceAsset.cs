@@ -1,11 +1,11 @@
 using System.Text;
 namespace Hok.Worker;
-internal sealed record ResourceAsset(string Id,string Name,string Source,string Type,string Extension,byte[] Data,string? Parent=null,string? Warning=null)
+internal sealed record ResourceAsset(string Id,string Name,string Source,string Type,string Extension,byte[] Data,string? Parent=null,string? Warning=null,bool RawAvailable=true,long? DeclaredBytes=null)
 {
     public bool IsAudio=>Type is "WwiseAudio" or "AudioFile";
     public bool IsBank=>Type=="WwiseBank";
     public string Preview=>IsBank?"bank":IsAudio?"audio":Extension is "png" or "jpg" or "bmp"?"image":"data";
-    public string[] Formats=>IsBank
+    public string[] Formats=>!RawAvailable?new[]{"json"}:IsBank
         ? new[]{"original","zip-wem"}.Concat(AudioTools.DecoderReady&&AudioTools.Mp3Ready?new[]{"zip-mp3"}:[]).Concat(new[]{"raw","json"}).ToArray()
         : IsAudio
         ? new[]{"original",Extension}.Concat(AudioTools.DecoderReady||Type=="AudioFile"?new[]{"wav"}:[]).Concat(AudioTools.Mp3Ready&&(AudioTools.DecoderReady||Type=="AudioFile")?new[]{"mp3"}:[]).Append("raw").Distinct().ToArray()
@@ -25,10 +25,11 @@ internal sealed record ResourceAsset(string Id,string Name,string Source,string 
         }
         throw new NotSupportedException(format);
     }
-    public object Describe()=>new{Id,Name,Source,Type,Extension,bytes=Data.Length,Parent,Warning,head=Convert.ToHexString(Data.AsSpan(0,Math.Min(256,Data.Length)))};
+    public object Describe()=>new{Id,Name,Source,Type,Extension,bytes=DeclaredBytes??Data.Length,retainedBytes=Data.Length,RawAvailable,Parent,Warning,head=Convert.ToHexString(Data.AsSpan(0,Math.Min(256,Data.Length)))};
     public static (string type,string extension) Detect(byte[] bytes,string fallback)
     {
         var s=bytes.AsSpan();
+        if(fallback=="QtsRawMetadata")return("QtsRawMetadata","bin");
         if(fallback=="CompressedQtsChunk")return("CompressedQtsChunk","qtschunk");
         if(s.StartsWith("AKPK"u8))return("WwisePackage","pck");
         if(s.StartsWith("BKHD"u8))return("WwiseBank","bnk");

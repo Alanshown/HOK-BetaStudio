@@ -1,0 +1,53 @@
+{
+  "date": "2026-10-04",
+  "version": "1.3",
+  "fileVersion": "1.3.0.2",
+  "sourceImport": "Selective merge of user-supplied hok-discovery-source-fixes.zip; Windows export adapters added locally",
+  "sample": {
+    "id": "3200019306",
+    "sha256": {
+      "3200019306.db": "de4e662b5a2dd0dff25b21a23678fbc7c0875b5c3ef8432b7688d64a9c3fc733",
+      "3200019306_0.db": "efedf7364299621941216e3204e9a0184061b3f01957f8d55300ecbecacaeb48"
+    },
+    "serializedFiles": 196,
+    "objectTableRows": 3685,
+    "parseStatuses": {"typed-complete":1660,"typed-partial":1550,"generic-raw":475},
+    "successfulExports": {"Texture2D/png":108,"Mesh/obj":85,"AnimationClip/anim":12},
+    "animatorControllers":8,
+    "legacyClipsWithAllBindingsExported":4,
+    "fbxModelConverterLegacyTracksVerified":true,
+    "nativeFbxRoundTripVerified":false,
+    "rawObjectRangesByteExact":3685,
+    "indexAndPackageRecords":231,
+    "indexAndPackageBytes":12112,
+    "packageMetadataBytes":116,
+    "inputsUnchanged":true
+  },
+  "regressions": {
+    "coreDiscoveryChecks":33,
+    "workerIntegrationChecks":10,
+    "frontendDiagnosticsChecks":13,
+    "catalogChecks":39,
+    "mediaChecks":15,
+    "rebuildBaselineChecks":16,
+    "installerPathCases":10,
+    "unknownDbDesktopChecks":20,
+    "contractChecks":27,
+    "additionalArbitraryNameChecks":7
+  },
+  "unknownDb": {
+    "zeroNamedSampleRecords":38992,
+    "zeroNamedSampleDiagnostics":34,
+    "zeroNamedSampleWwiseAudio":274,
+    "zeroNamedSampleWwiseBank":4,
+    "renamed10500Records":879,
+    "renamed10500ReplacementRebuildReimportVerified":true
+  },
+  "limitations": [
+    "typed-complete means the reader consumed its object range, not independent semantic or game compatibility proof.",
+    "The zero-named sample retains undecoded chunks and missing external image resources; not every preview succeeds.",
+    "General QTS page-tree variants outside the validated samples remain unsupported.",
+    "Modified rebuild remains Beta and has no game-runtime compatibility validation.",
+    "Installer validation exercises the actual NSIS checker without modifying production installation registry or shortcuts."
+  ]
+}

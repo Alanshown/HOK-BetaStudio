@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 
 namespace AssetStudio
 {
@@ -34,12 +34,12 @@ namespace AssetStudio
             if (needSearch)
             {
                 var resourceFileName = Path.GetFileName(path);
-                if (assetsFile.assetsManager.resourceFileReaders.TryGetValue(resourceFileName, out reader))
+                if (assetsFile.assetsManager.TryGetResource(assetsFile, resourceFileName, out reader))
                 {
                     needSearch = false;
                     return reader;
                 }
-                var assetsFileDirectory = Path.GetDirectoryName(assetsFile.fullName);
+                var assetsFileDirectory = Path.GetDirectoryName(assetsFile.originalPath ?? assetsFile.fullName);
                 var resourceFilePath = Path.Combine(assetsFileDirectory, resourceFileName);
                 if (!File.Exists(resourceFilePath))
                 {
@@ -59,7 +59,7 @@ namespace AssetStudio
                 if (assetsFile.game.Type.IsHonorOfKings())
                 {
                     var hashedPath = QtsVFSFile.Compute(path, true);
-                    if (assetsFile.assetsManager.resourceFileReaders.TryGetValue(hashedPath.ToString(), out reader))
+                    if (assetsFile.assetsManager.TryGetResource(assetsFile, hashedPath.ToString(), out reader))
                     {
                         needSearch = false;
                         return reader;

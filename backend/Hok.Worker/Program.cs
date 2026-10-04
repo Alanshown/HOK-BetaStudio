@@ -6,10 +6,14 @@ using AssetStudio;
 using Hok.Contracts;
 using Obj=AssetStudio.Object;
 namespace Hok.Worker;
-internal sealed record AssetRow(string Id,string Name,string Type,string PathId,string Source,string Bytes,string[] Formats,string Preview);
+internal sealed record AssetRow(string Id,string Name,string Type,string PathId,string Source,string Bytes,string[] Formats,string Preview,int? ClassId=null,string? ParseStatus=null,string? Warning=null,long? ConsumedBytes=null,long? RemainingBytes=null);
 internal sealed class CaptureLog:ILogger {
  public readonly List<string> Errors=[];
- public void Log(LoggerEvent level,string message){Console.Error.WriteLine($"[{level}] {message}");if(level is LoggerEvent.Error or LoggerEvent.Warning && Errors.Count<100)Errors.Add(message);}
+ public int ErrorCount { get; private set; }
+ public int WarningCount { get; private set; }
+ public bool ErrorsTruncated => ErrorCount + WarningCount > Errors.Count;
+ public void AddError(string message) => Log(LoggerEvent.Error,message);
+ public void Log(LoggerEvent level,string message){Console.Error.WriteLine($"[{level}] {message}");if(level==LoggerEvent.Error)ErrorCount++;if(level==LoggerEvent.Warning)WarningCount++;if(level is LoggerEvent.Error or LoggerEvent.Warning && Errors.Count<100)Errors.Add(message);}
 }
 internal static class Program {
  internal static readonly JsonSerializerOptions Json=new(JsonSerializerDefaults.Web);
@@ -18,6 +22,7 @@ internal static class Program {
  static readonly List<AssetRow> Rows=[];
  static AssetsManager? manager;static string cache="";static ReplacementSession? replacements;
  static int Main(string[] args) {
+  Console.InputEncoding=new UTF8Encoding(false);Console.OutputEncoding=new UTF8Encoding(false);
   CultureInfo.CurrentCulture=CultureInfo.InvariantCulture;
   cache=args.Length>0?Path.GetFullPath(args[0]):Path.Combine(Path.GetTempPath(),"hok-preview-"+Guid.NewGuid());
   Directory.CreateDirectory(cache);AudioTools.Scratch=cache;
@@ -38,7 +43,7 @@ internal static class Program {
   "replacementState"=>replacements?.State()??throw new InvalidOperationException("Load a package first"),
   "replace"=>replacements?.Stage(p.GetProperty("assetId").GetString()!,p.GetProperty("path").GetString()!)??throw new InvalidOperationException("Load a package first"),
   "rebuild"=>replacements?.Build(p.GetProperty("output").GetString()!)??throw new InvalidOperationException("Load a package first"),
-  "ping"=>new{version="1.2",language="C#"},"dump"=>Dump(p.GetProperty("assetId").GetString()!),
+  "ping"=>new{version="1.3",language="C#"},"dump"=>Dump(p.GetProperty("assetId").GetString()!),
   _=>throw new InvalidOperationException("Unknown method")};
  static string Hash(string text)=>Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text.ToUpperInvariant())))[..16];
  static void AddResource(ResourceAsset item){
@@ -49,43 +54,54 @@ internal static class Program {
   replacements=null;manager?.Clear();Objects.Clear();Resources.Clear();Rows.Clear();var log=new CaptureLog();Logger.Default=log;
   manager=new AssetsManager{Game=GameManager.GetGame(GameType.HonorOfKings)};
   var accepted=new List<string>();
-  foreach(var path in paths){if(!File.Exists(path))throw new FileNotFoundException(path);if(new FileInfo(path).Length<32){log.Errors.Add(Path.GetFileName(path)+": truncated file header");continue;}accepted.Add(path);}
+  foreach(var path in paths){if(!File.Exists(path))throw new FileNotFoundException(path);if(new FileInfo(path).Length<32){log.AddError(Path.GetFileName(path)+": truncated file header");continue;}accepted.Add(path);}
   if(accepted.Count>0)manager.LoadFilesReadOnly(accepted.ToArray());
   foreach(var file in manager.assetsFileList){
    string prefix=Hash(file.fullName);
-   foreach(var obj in file.Objects){
-    var id=$"{prefix}:{obj.m_PathID}";Objects.Add(id,obj);
-    Rows.Add(new(id,string.IsNullOrWhiteSpace(obj.Name)?$"{obj.type} #{obj.m_PathID}":obj.Name,obj.type.ToString(),obj.m_PathID.ToString(),file.fileName,obj.byteSize.ToString(),Exporters.Formats(obj),obj switch{Texture2D or Sprite=>"image",Mesh=>"model",AudioClip=>"audio",_=>"data"}));
-   }
-   var parsed=file.Objects.Select(o=>o.m_PathID).ToHashSet();
-   foreach(var meta in file.m_Objects.Where(m=>!parsed.Contains(m.m_PathID))){
-    if(meta.byteSize>512*1024*1024){log.Errors.Add($"Unparsed object {meta.m_PathID} exceeds the safe raw-read limit; export its SerializedFile container.");continue;}
-    long position=file.reader.Position;
-    try{file.reader.Position=meta.byteStart;var bytes=file.reader.ReadBytes((int)meta.byteSize);
-     AddResource(new($"unparsed:{prefix}/{meta.m_PathID}",$"{(ClassIDType)meta.classID} #{meta.m_PathID}",file.fileName,"UnparsedObject","bin",bytes,Warning:"Object parser failed; raw source bytes are retained."));
-    }finally{file.reader.Position=position;}
+   foreach(var meta in file.m_Objects){
+    file.ObjectsDic.TryGetValue(meta.m_PathID,out var obj);
+    file.ParseStatuses.TryGetValue(meta.m_PathID,out var parse);
+    string type=ObjectParseStatus.ClassName(meta.classID),status=parse?.Status??"not-attempted";
+    string? warning=status=="typed-complete"?null:$"{status}: {parse?.Error??"Incomplete semantic interpretation; original raw bytes remain available."}";
+    var id=$"{prefix}:{meta.m_PathID}";
+    if(obj is not null){
+     Objects.Add(id,obj);
+     Rows.Add(new(id,string.IsNullOrWhiteSpace(obj.Name)?$"{type} #{meta.m_PathID}":obj.Name,type,meta.m_PathID.ToString(),file.fullName,meta.byteSize.ToString(),Exporters.Formats(obj),obj switch{Texture2D or Sprite=>"image",Mesh=>"model",AudioClip=>"audio",_=>"data"},meta.classID,status,warning,parse?.ConsumedBytes,parse?.RemainingBytes));
+    }else{
+     byte[] bytes=[];bool rawAvailable=false;long position=file.reader.Position;
+     try{
+      if(meta.byteSize>512*1024*1024||meta.byteStart<0||meta.byteStart>file.reader.Length-meta.byteSize)throw new InvalidDataException("Invalid/oversized raw object range; inspect original SerializedFile container.");
+      file.reader.Position=meta.byteStart;bytes=file.reader.ReadBytes((int)meta.byteSize);rawAvailable=bytes.Length==meta.byteSize;
+      if(!rawAvailable)throw new EndOfStreamException("Short raw object read");
+     }catch(Exception e){warning+=" "+e.Message;log.AddError($"{file.fullName} object {meta.m_PathID}: {e.Message}");}
+     finally{file.reader.Position=position;}
+     var resource=new ResourceAsset(id,$"{type} #{meta.m_PathID}",file.fileName,type,"bin",bytes,Warning:warning,RawAvailable:rawAvailable,DeclaredBytes:meta.byteSize);
+     Resources.Add(id,resource);
+     Rows.Add(new(id,resource.Name,type,meta.m_PathID.ToString(),file.fullName,meta.byteSize.ToString(),resource.Formats,resource.Preview,meta.classID,status,warning,parse?.ConsumedBytes,parse?.RemainingBytes));
+    }
    }
   }
   var capturedNames=new HashSet<string>(StringComparer.OrdinalIgnoreCase);
   foreach(var entry in manager.ContainerEntries){
    capturedNames.Add(entry.Id);var detected=ResourceAsset.Detect(entry.Data,entry.Kind);
-   AddResource(new($"entry:{Hash(entry.Source)}/{entry.Id}",entry.Id+"."+detected.extension,Path.GetFileName(entry.Source),detected.type,detected.extension,entry.Data,Warning:entry.Warning));
+   AddResource(new($"entry:{Hash(entry.Source)}/{entry.Id}",entry.Id+"."+detected.extension,entry.Source,detected.type,detected.extension,entry.Data,Warning:entry.Warning));
   }
   foreach(var pair in manager.ResourceFiles.Where(p=>!capturedNames.Contains(p.Key))){
    var stream=pair.Value.BaseStream;long position=stream.Position;
-   try{if(stream.Length>512L*1024*1024){log.Errors.Add(pair.Key+": resource exceeds safe in-memory limit");continue;}
+   try{if(stream.Length>512L*1024*1024){log.AddError(pair.Key+": resource exceeds safe in-memory limit");continue;}
     stream.Position=0;var bytes=pair.Value.ReadBytes((int)stream.Length);var detected=ResourceAsset.Detect(bytes,"");
     AddResource(new("resource:"+Hash(string.Join("|",paths))+"/"+Hash(pair.Key),pair.Key+"."+detected.extension,pair.Key,detected.type,detected.extension,bytes));
    }finally{stream.Position=position;}
   }
   foreach(var parent in Resources.Values.Where(r=>r.Extension is "pck" or "bnk").ToArray()){
    try{foreach(var child in WwiseIndex.Expand(parent))AddResource(child);}
-   catch(Exception e){log.Errors.Add(parent.Name+": "+e.Message+"; the original container remains exportable.");}
+   catch(Exception e){log.AddError(parent.Name+": "+e.Message+"; the original container remains exportable.");}
   }
   // Editing candidates must not live in the WebView's publicly mapped preview directory.
   var editCache=Path.Combine(Path.GetDirectoryName(cache)!,"editing",Path.GetFileName(cache));
   replacements=new ReplacementSession(manager,Objects,Resources,accepted.ToArray(),editCache);
-  return new{count=Rows.Count,unityObjects=Objects.Count,containerFiles=manager.ContainerEntries.Count,serializedFiles=manager.assetsFileList.Count,errors=log.Errors,types=Rows.GroupBy(x=>x.Type).ToDictionary(g=>g.Key,g=>g.Count())};
+  return new{count=Rows.Count,unityObjects=Objects.Count,containerFiles=manager.ContainerEntries.Count,serializedFiles=manager.assetsFileList.Count,errors=log.Errors,errorCount=log.ErrorCount,warningCount=log.WarningCount,errorsTruncated=log.ErrorsTruncated,
+   objectTableRows=manager.assetsFileList.Sum(f=>f.m_Objects.Count),parseStatuses=manager.assetsFileList.SelectMany(f=>f.ParseStatuses.Values).GroupBy(s=>s.Status).ToDictionary(g=>g.Key,g=>g.Count()),loadedFiles=accepted.ToArray(),types=Rows.GroupBy(x=>x.Type).ToDictionary(g=>g.Key,g=>g.Count())};
  }
  static object List(JsonElement p) {
   var query=p.TryGetProperty("query",out var q)?q.GetString()??"":"";
@@ -101,7 +117,8 @@ internal static class Program {
  }
  static object Dump(string id) {
   string text=Resources.TryGetValue(id,out var resource)?JsonSerializer.Serialize(resource.Describe(),new JsonSerializerOptions(Json){WriteIndented=true}):Objects.TryGetValue(id,out var obj)?obj.Dump()??Exporters.ToJson(obj):throw new InvalidOperationException("Asset no longer loaded");
-  return new{text=text.Length>262144?text[..262144]:text,truncated=text.Length>262144};
+  var row=Row(id);if(row.ParseStatus is not null)text=$"Class ID: {row.ClassId}; PathID: {row.PathId}; parse status: {row.ParseStatus}\nSource: {row.Source}\nConsumed bytes: {row.ConsumedBytes}; remaining bytes: {row.RemainingBytes}\n{row.Warning}\n\n"+text;
+  return new{text=text.Length>262144?text[..262144]+"\n[TRUNCATED: preview limited to 262144 characters; export JSON/raw for complete data.]":text,truncated=text.Length>262144};
  }
  static object Bank(string id){
   if(!Resources.TryGetValue(id,out var bank)||!bank.IsBank)throw new InvalidOperationException("SoundBank no longer loaded");

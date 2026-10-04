@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.IO;
@@ -15,11 +15,14 @@ namespace AssetStudio
         public long offset = 0;
         public string fullName;
         public string originalPath;
+        public string containerEntryId;
+        public long containerByteOffset;
         public string fileName;
         public int[] version = { 0, 0, 0, 0 };
         public BuildType buildType;
         public List<Object> Objects;
         public Dictionary<long, Object> ObjectsDic;
+        public Dictionary<long, ObjectParseStatus> ParseStatuses = new Dictionary<long, ObjectParseStatus>();
 
         public SerializedFileHeader header;
         private byte m_FileEndianess;

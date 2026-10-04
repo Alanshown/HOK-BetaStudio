@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Buffers.Binary;
 using System.Collections;
 using System.Collections.Generic;
@@ -966,6 +966,7 @@ namespace AssetStudio
             //Vertex
             if (m_CompressedMesh.m_Vertices.m_NumItems > 0)
             {
+                var pv = m_CompressedMesh.m_Vertices;
                 m_VertexCount = (int)m_CompressedMesh.m_Vertices.m_NumItems / 3;
                 m_Vertices = m_CompressedMesh.m_Vertices.UnpackFloats(3, 3 * 4);
             }
@@ -1085,6 +1086,7 @@ namespace AssetStudio
             {
                 if (m_CompressedMesh.m_FloatColors.m_NumItems > 0)
                 {
+                    var c = m_CompressedMesh.m_FloatColors;
                     m_Colors = m_CompressedMesh.m_FloatColors.UnpackFloats(1, 4);
                 }
             }
