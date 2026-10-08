@@ -8,6 +8,8 @@ namespace AssetStudio
 {
 	public sealed class YAMLScalarNode : YAMLNode
 	{
+		internal static string FormatFloat(float value) => float.IsNaN(value) ? ".nan" : float.IsPositiveInfinity(value) ? ".inf" : float.IsNegativeInfinity(value) ? "-.inf" : value.ToString("R", CultureInfo.InvariantCulture);
+		internal static string FormatFloat(double value) => double.IsNaN(value) ? ".nan" : double.IsPositiveInfinity(value) ? ".inf" : double.IsNegativeInfinity(value) ? "-.inf" : value.ToString("R", CultureInfo.InvariantCulture);
 		public YAMLScalarNode()
 		{
 		}
@@ -433,9 +435,9 @@ namespace AssetStudio
 					case ScalarType.UInt64:
 						return m_value.ToString();
 					case ScalarType.Single:
-						return BitConverterExtensions.ToSingle((uint)m_value).ToString(CultureInfo.InvariantCulture);
+						return FormatFloat(BitConverterExtensions.ToSingle((uint)m_value));
 					case ScalarType.Double:
-						return BitConverterExtensions.ToDouble(m_value).ToString(CultureInfo.InvariantCulture);
+						return FormatFloat(BitConverterExtensions.ToDouble(m_value));
 					case ScalarType.String:
 						return m_string;
 

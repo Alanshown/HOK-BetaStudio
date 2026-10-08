@@ -203,7 +203,8 @@ namespace AssetStudio
                     CheckStrippedVersion(assetsFile);
                     assetsFileList.Add(assetsFile);
                     assetsFileListHash.Add(reader.FullPath);
-                    if (assetsFileList.Count(f => f.fileName.Equals(assetsFile.fileName, StringComparison.OrdinalIgnoreCase)) > 1)
+                    serializedNameCounts.TryGetValue(assetsFile.fileName,out int nameCount);serializedNameCounts[assetsFile.fileName]=nameCount+1;
+                    if (nameCount > 0)
                         Logger.Warning($"Distinct SerializedFiles share name {assetsFile.fileName}; preserving all source identities. External references must resolve unambiguously.");
 
                     foreach (var sharedFile in assetsFile.m_Externals)
@@ -252,12 +253,14 @@ namespace AssetStudio
                     CheckStrippedVersion(assetsFile);
                     assetsFileList.Add(assetsFile);
                     assetsFileListHash.Add(reader.FullPath);
-                    if (assetsFileList.Count(f => f.fileName.Equals(assetsFile.fileName, StringComparison.OrdinalIgnoreCase)) > 1)
+                    serializedNameCounts.TryGetValue(assetsFile.fileName,out int nameCount);serializedNameCounts[assetsFile.fileName]=nameCount+1;
+                    if (nameCount > 0)
                         Logger.Warning($"Distinct SerializedFiles share name {assetsFile.fileName}; preserving all source identities. External references must resolve unambiguously.");
                 }
                 catch (Exception e)
                 {
                     Logger.Error($"Error while reading assets file {reader.FullPath} from {Path.GetFileName(originalPath)}", e);
+                    serializedReadErrors[reader.FullPath] = e.GetBaseException().Message;
                     RegisterResource(reader.FileName, reader, originalPath);
                 }
             }
@@ -561,7 +564,7 @@ namespace AssetStudio
             }
         }
 
-        private void LoadQtsVFS(FileReader reader, string originalPath = null, long originalOffset = 0, bool log = true)
+        private void LoadQtsVFSLegacy(FileReader reader, string originalPath = null, long originalOffset = 0, bool log = true)
         {
             if (log)
             {
@@ -826,12 +829,14 @@ namespace AssetStudio
             foreach (var resource in retiredResourceReaders) resource.Close();
             diskResourceReaders.Clear();
             resolvedExternals.Clear();
+            ClearReferenceIndex();
             retiredResourceReaders.Clear();
             ambiguousScopedResources.Clear();
             scopedResourceReaders.Clear();
             ambiguousResourceNames.Clear();
             resourceFileReaders.Clear();
             ContainerEntries.Clear();
+            ClearQts();
 
             assetsFileIndexCache.Clear();
 
@@ -842,6 +847,7 @@ namespace AssetStudio
             GC.Collect();
         }
 
+        public bool DeferHeavyObjects { get; set; }
         private void ReadAssets()
         {
             Logger.Info("Read assets...");
@@ -864,7 +870,8 @@ namespace AssetStudio
                     try
                     {
                         objectReader = new ObjectReader(assetsFile.reader, assetsFile, objectInfo, Game);
-                        Object obj = objectReader.type switch
+                        Object obj = DeferHeavyObjects && objectReader.type.CanParse() && DeferredObject.CanDefer(objectReader.type)
+                            ? new DeferredObject(objectReader) : objectReader.type switch
                         {
                             ClassIDType.Animation when ClassIDType.Animation.CanParse() => new Animation(objectReader),
                             ClassIDType.AnimationClip when ClassIDType.AnimationClip.CanParse() => new AnimationClip(objectReader),
@@ -874,6 +881,7 @@ namespace AssetStudio
                             ClassIDType.AssetBundle when ClassIDType.AssetBundle.CanParse() => new AssetBundle(objectReader),
                             ClassIDType.AudioClip when ClassIDType.AudioClip.CanParse() => new AudioClip(objectReader),
                             ClassIDType.Avatar when ClassIDType.Avatar.CanParse() => new Avatar(objectReader),
+                            ClassIDType.Cubemap when ClassIDType.Cubemap.CanParse() => new Cubemap(objectReader),
                             ClassIDType.Font when ClassIDType.Font.CanParse() => new Font(objectReader),
                             ClassIDType.GameObject when ClassIDType.GameObject.CanParse() => new GameObject(objectReader),
                             ClassIDType.IndexObject when ClassIDType.IndexObject.CanParse() => new IndexObject(objectReader),
@@ -888,6 +896,7 @@ namespace AssetStudio
                             ClassIDType.PlayerSettings when ClassIDType.PlayerSettings.CanParse() => new PlayerSettings(objectReader),
                             ClassIDType.RectTransform when ClassIDType.RectTransform.CanParse() => new RectTransform(objectReader),
                             ClassIDType.Shader when ClassIDType.Shader.CanParse() => new Shader(objectReader),
+                            ClassIDType.ShaderVariantCollection when ClassIDType.ShaderVariantCollection.CanParse() => new ShaderVariantCollection(objectReader),
                             ClassIDType.SkinnedMeshRenderer when ClassIDType.SkinnedMeshRenderer.CanParse() => new SkinnedMeshRenderer(objectReader),
                             ClassIDType.Sprite when ClassIDType.Sprite.CanParse() => new Sprite(objectReader),
                             ClassIDType.SpriteAtlas when ClassIDType.SpriteAtlas.CanParse() => new SpriteAtlas(objectReader),
@@ -905,6 +914,34 @@ namespace AssetStudio
                         if (status.RemainingBytes < 0) throw new InvalidDataException("Parser crossed the object boundary");
                         status.Status = !status.Typed ? (objectReader.type.CanParse() ? "generic-raw" : "parser-disabled")
                             : status.RemainingBytes == 0 ? "typed-complete" : "typed-partial";
+                        if (obj is DeferredObject) { status.Status = "deferred"; status.Typed = false; }
+                        if (obj is not DeferredObject && status.Status != "typed-complete" && obj.serializedType != null && obj.serializedType.m_Type == null)
+                            obj.serializedType.m_Type = HokTypeSchemas.Find(objectReader);
+                        if (obj is not DeferredObject && status.Status != "typed-complete" && obj.serializedType?.m_Type?.m_Nodes?.Count > 1)
+                        {
+                            long typedPosition = objectReader.Position;
+                            try
+                            {
+                                // The file's own schema is stronger evidence than
+                                // a guessed engine-version layout. Do not drop
+                                // particle/custom fields just because no hand-written
+                                // class exists. Validate all bytes before marking it.
+                                var data = obj.ToType();
+                                long consumed = objectReader.Position - objectInfo.byteStart;
+                                if (consumed != objectInfo.byteSize)
+                                    throw new InvalidDataException($"Type tree read {consumed}/{objectInfo.byteSize} bytes");
+                                obj.UseTypeTree = true;
+                                if (data.Contains("m_Name") && data["m_Name"] is string schemaName) obj.SchemaName = schemaName;
+                                status.Parser = "TypeTree/" + ObjectParseStatus.ClassName(objectInfo.classID);
+                                status.Typed = true; status.Status = "typed-complete";
+                                status.ConsumedBytes = consumed; status.RemainingBytes = 0;
+                            }
+                            catch (Exception treeError)
+                            {
+                                status.Error = "Type tree: " + treeError.GetBaseException().Message;
+                                objectReader.Position = typedPosition;
+                            }
+                        }
                         assetsFile.AddObject(obj);
                     }
                     catch (Exception e)

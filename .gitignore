@@ -11,6 +11,8 @@ build/
 **/obj/
 **/*.tsbuildinfo
 deliverables/
+reports/
+tests/hok_db_corpus.txt
 3200010500/
 3200010504/
 *.db

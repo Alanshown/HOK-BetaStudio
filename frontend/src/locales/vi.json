@@ -13,6 +13,7 @@
   "seekAudio": "Vị trí phát",
   "volumeAudio": "Âm lượng",
   "audioError": "Không thể phát âm thanh. Hãy xuất tệp gốc.",
+  "audioFormatHint": "BNK là ngân hàng âm thanh và WEM là âm thanh mã hóa Wwise. Dùng công cụ hỗ trợ Wwise; chọn MP3 cho trình phát thông thường.",
   "file": "Tệp",
   "openFiles": "Mở tệp",
   "openFolder": "Mở thư mục",
@@ -139,5 +140,11 @@
   "animationProperties": "Clip có thuộc tính tùy chỉnh hoặc kênh thay đối tượng. Chỉ phát các kênh mô hình/xương được hỗ trợ.",
   "animationIncomplete": "Bản xem trước kết hợp còn hạn chế",
   "animationParticles": "Đã tìm thấy hiệu ứng hạt liên quan, nhưng trình xem chưa tái hiện mô phỏng hạt Unity và shader tùy chỉnh.",
-  "animationNoModel": "Không tìm thấy mô hình liên quan đã xác minh; không thay bằng mô hình khác. Vẫn có thể xuất hoạt ảnh gốc."
+  "animationNoModel": "Không tìm thấy mô hình liên quan đã xác minh; không thay bằng mô hình khác. Vẫn có thể xuất hoạt ảnh gốc.",
+  "animationCurveOnly": "Không có mô hình liên kết xác nhận. Hiển thị các khung hình gốc; đường nối biểu diễn mẫu, không mô phỏng hạt hoặc vật liệu.",
+  "animationTrack": "Kênh",
+  "animationKeyframes": "Khung hình",
+  "parseDeferred": "Giải mã khi cần",
+  "bankSelectAudio": "Chọn âm thanh để tải bản xem trước",
+  "fontSample": "Nhập văn bản để xem trước phông chữ"
 }

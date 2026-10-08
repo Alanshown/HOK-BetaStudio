@@ -2,6 +2,7 @@ import type {Asset,LoadSummary} from './types';
 import type {Text} from './i18n';
 
 const statusLabels={
+ 'deferred':'parseDeferred',
  'typed-complete':'parseTypedComplete',
  'typed-partial':'parseTypedPartial',
  'generic-raw':'parseGenericRaw',

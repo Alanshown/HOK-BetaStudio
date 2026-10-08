@@ -45,6 +45,7 @@ internal sealed class ReplacementSession
         ContainerEntry entry; int offset; int length; string name;
         if (objects.TryGetValue(id, out var obj))
         {
+            obj = DeferredObject.Resolve(obj);
             if (obj.GetType() == typeof(Obj) || obj is MonoBehaviour) throw new NotSupportedException("Beta cannot safely edit opaque/custom object layouts. Replace only supported raw objects or an identified resource stream.");
             if (!obj.assetsFile.ParseStatuses.TryGetValue(obj.m_PathID, out var parse) || parse.Status != "typed-complete")
                 throw new NotSupportedException("Beta replacement requires a completely read object; partial/failed layouts remain read-only.");
@@ -56,7 +57,7 @@ internal sealed class ReplacementSession
         {
             if (resource.Parent is not null || resource.Type is "PackageMetadata" or "QtsRawMetadata" or "CompressedQtsChunk" or "UnparsedObject")
                 throw new NotSupportedException("Beta cannot replace nested media, package metadata or undecoded chunks. Use the complete original container where supported.");
-            var entries = manager.ContainerEntries.Where(e => ReferenceEquals(e.Data, resource.Data)).ToArray();
+            var entries = manager.ContainerEntries.Where(e => ReferenceEquals(e, resource.Backing) || resource.Backing is null && ReferenceEquals(e.Data, resource.Bytes)).ToArray();
             if (entries.Length != 1) throw new InvalidDataException("No unique original QTS entry for this resource.");
             entry = entries[0]; offset = 0; length = entry.Data.Length; name = resource.Name;
             if (resource.Type == "SerializedFile") throw new NotSupportedException("Beta whole-SerializedFile replacement is disabled; select a supported individual object instead.");
@@ -68,7 +69,7 @@ internal sealed class ReplacementSession
         if (resources.TryGetValue(id, out var media) && media.Type is "WwiseBank" or "WwisePackage")
         {
             if (ResourceAsset.Detect(bytes, entry.Kind).type != media.Type) throw new InvalidDataException("Replacement container type differs.");
-            _ = WwiseIndex.Expand(media with { Data = bytes }).ToArray();
+            _ = WwiseIndex.Expand(media with { Bytes = bytes, Backing = null }).ToArray();
         }
         foreach (var other in pending.Values.Where(p => p.AssetId != id && ReferenceEquals(p.Entry, entry)))
             if (offset < other.Offset + other.Bytes.Length && other.Offset < offset + length) throw new InvalidDataException("This replacement overlaps another staged item.");

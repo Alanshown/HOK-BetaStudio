@@ -40,7 +40,7 @@ namespace AssetStudio
                 m_BlendShapeWeights = reader.ReadSingleArray();
             }
 
-            if (reader.Game.Type.IsGIGroup())
+            if (reader.Game.Type.IsGIGroup() || reader.Game.Type.IsHonorOfKings())
             {
                 m_RootBone = new PPtr<Transform>(reader);
                 m_AABB = new AABB(reader);

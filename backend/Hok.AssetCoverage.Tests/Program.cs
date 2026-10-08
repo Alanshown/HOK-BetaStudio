@@ -7,6 +7,7 @@ Logger.Silent=true;
 var checks=new List<string>();
 void Check(bool ok,string message){if(!ok)throw new Exception(message);checks.Add(message);Console.WriteLine("PASS "+message);}
 void Reject(Action action,string message){try{action();}catch(InvalidDataException){Check(true,message);return;}throw new Exception(message);}
+Check(new YAMLScalarNode(float.PositiveInfinity).Value==".inf"&&new YAMLScalarNode(double.NegativeInfinity).Value=="-.inf","YAML infinite tangents use numeric YAML scalars, not strings");
 ushort[] Pack(params (int Width,uint Value)[][] frames){
  var words=new List<ushort>();
  foreach(var frame in frames){int bit=0;var row=new List<ushort>();
@@ -27,6 +28,9 @@ var nonzero=DenseClip.DecodeHokSamples(1,4,Pack([(8,51),(8,102),(8,51),(3,7)]),[
 Check(Math.Abs(nonzero[0]-.2f)<1e-6&&Math.Abs(nonzero[1]-.4f)<1e-6&&Math.Abs(nonzero[2]-.2f)<1e-6&&nonzero[3]<0&&Math.Abs(nonzero.Sum(x=>x*x)-1)<1e-6,"nonzero quaternion reconstructs omitted component with correct sign");
 var legacy=DenseClip.DecodeHokSamples(1,4,[1,2,3,4],[Range(1,-1,.5f)]);
 Check(legacy.SequenceEqual(new[]{-.5f,0,.5f,1}),"legacy full UInt16 encoding remains unchanged");
+var padded=DenseClip.DecodeHokSamples(2,3,[1,2,3,0,4,5,6,0],[Range(0x1002)]);
+Check(padded.SequenceEqual(new float[]{1,2,3,4,5,6}),"HOK exact-word frames skip validated zero padding");
+Reject(()=>DenseClip.DecodeHokSamples(2,3,[1,2,3,9,4,5,6,0],[Range(0x1002)]),"nonzero extra frame word is not treated as padding");
 Reject(()=>DenseClip.DecodeHokSamples(2,1,[1],[Range(0x803)]),"truncated packed frame is rejected");
 Reject(()=>DenseClip.DecodeHokSamples(1,1,[1],[Range(0x1103)]),"unsupported precision is rejected");
 Reject(()=>DenseClip.DecodeHokSamples(1,1,[1],[Range(0x804)]),"unknown group type is rejected");
@@ -35,6 +39,8 @@ Reject(()=>DenseClip.DecodeHokSamples(1,4,[0xffff,0xffff],[Range(0x801,2,1)]),"i
 using(var raw=new BinaryReader(new MemoryStream([1,2,3]))){
  Reject(()=>new ResourceReader(raw,2,2).GetData(),"short resource range is not reported as successful");
  Check(new ResourceReader(raw,0,3).GetData().SequenceEqual(new byte[]{1,2,3}),"complete resource range is byte-exact");
+ Check(new ResourceReader(raw,0,3).Slice(1,2).GetData().SequenceEqual(new byte[]{2,3}),"resource slices retain exact offsets and length");
+ Reject(()=>new ResourceReader(raw,1,1).Slice(0,2),"resource slice cannot escape its parent into the next face or object");
 }
 var reports=new List<object>();
 foreach(string argument in args.Where(a=>!a.StartsWith("--"))){

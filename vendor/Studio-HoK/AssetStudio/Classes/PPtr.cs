@@ -73,6 +73,7 @@ namespace AssetStudio
             {
                 if (sourceFile.ObjectsDic.TryGetValue(m_PathID, out var obj))
                 {
+                    obj = DeferredObject.Resolve(obj);
                     if (obj is T variable)
                     {
                         result = variable;
@@ -91,6 +92,7 @@ namespace AssetStudio
             {
                 if (sourceFile.ObjectsDic.TryGetValue(m_PathID, out var obj))
                 {
+                    obj = DeferredObject.Resolve(obj);
                     if (obj is T2 variable)
                     {
                         result = variable;

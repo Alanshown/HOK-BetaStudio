@@ -6,7 +6,7 @@ namespace Hok.Worker;
 
 internal static class AnimationPreview
 {
-    static bool References(PPtr<AnimationClip>? pointer,AnimationClip clip)=>pointer is not null&&pointer.TryGet(out var target)&&ReferenceEquals(target,clip);
+    static bool References(PPtr<AnimationClip>? pointer,AnimationClip clip)=>pointer is not null&&pointer.m_PathID==clip.m_PathID&&pointer.TryGet(out var target)&&ReferenceEquals(target,clip);
     static bool ControllerReferences(RuntimeAnimatorController controller,AnimationClip clip,HashSet<RuntimeAnimatorController> visited)
     {
         if(!visited.Add(controller))return false;
@@ -41,7 +41,7 @@ internal static class AnimationPreview
     public static object Build(AssetsManager manager,AnimationClip clip,string cache)
     {
         var roots=FindRoots(manager,clip);
-        if(roots.Count==0)throw new InvalidDataException("ANIMATION_NO_RELATED_MODEL");
+        if(roots.Count==0)return AnimationCurves.Preview(clip,cache);
         // Remove nested duplicates already included by an ancestor root.
         var descendants=roots.ToDictionary(r=>r,r=>Hierarchy(r).ToHashSet());
         roots=roots.Where(r=>!roots.Any(other=>other!=r&&descendants[other].Contains(r))).ToList();
@@ -65,7 +65,7 @@ internal static class AnimationPreview
         ModelConverter model;
         try{model=Create();}
         catch(IOException){options.exportMaterials=false;model=Create();warnings.Add("materials");}
-        if(model.MeshList.Count==0)throw new InvalidDataException("ANIMATION_NO_RELATED_MODEL");
+        if(model.MeshList.Count==0)return AnimationCurves.Preview(clip,cache);
         if(!model.AnimationList.Any(a=>a.TrackList.Any(t=>t.Rotations.Count+t.Translations.Count+t.Scalings.Count>0)))
             throw new InvalidDataException("ANIMATION_NO_SUPPORTED_TRACKS");
         if(clip.m_FloatCurves.Any(c=>c.classID!=ClassIDType.SkinnedMeshRenderer)||clip.m_PPtrCurves.Count>0)warnings.Add("properties");

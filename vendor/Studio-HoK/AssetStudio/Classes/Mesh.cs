@@ -500,6 +500,7 @@ namespace AssetStudio
         private VertexData m_VertexData;
         private CompressedMesh m_CompressedMesh;
         private StreamingInfo m_StreamData;
+        public StreamingInfo StreamingData => m_StreamData;
         private bool m_CollisionMeshBaked = false;
 
         public static bool HasVertexColorSkinning(SerializedType type) => type.Match("413A501B79022BF2DF389A82002FC81F");

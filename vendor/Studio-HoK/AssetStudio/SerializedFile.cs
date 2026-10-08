@@ -117,10 +117,15 @@ namespace AssetStudio
             Logger.Verbose($"Found {typeCount} serialized types");
             for (int i = 0; i < typeCount; i++)
             {
-                m_Types.Add(ReadSerializedType(false));
+                var type = ReadSerializedType(false);
+                m_Types.Add(type);
                 if (game.Type.IsHonorOfKings())
                 {
-                    var unk = reader.ReadInt32();
+                    // HOK strips the tree nodes but retains the counted type
+                    // dependency list. Most files have zero; treating its count
+                    // as an unused word loses the following object table when
+                    // a MonoBehaviour has managed-reference dependencies.
+                    type.m_TypeDependencies = reader.ReadInt32Array();
                 }
             }
 
@@ -326,6 +331,17 @@ namespace AssetStudio
                         type.m_TypeDependencies = reader.ReadInt32Array();
                     }
                 }
+            }
+
+            if (!m_EnableTypeTree && game.Type.IsHonorOfKings() && isRefType &&
+                header.m_Version >= SerializedFileFormatVersion.StoresTypeDependencies)
+            {
+                // Managed-reference names survive even when HOK removes tree
+                // nodes. Without these three strings the next type starts in
+                // the middle of a class name and every later reference is lost.
+                type.m_KlassName = reader.ReadStringToNull();
+                type.m_NameSpace = reader.ReadStringToNull();
+                type.m_AsmName = reader.ReadStringToNull();
             }
 
             Logger.Verbose($"Serialized type info: {type}");

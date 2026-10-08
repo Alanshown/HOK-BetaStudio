@@ -11,6 +11,30 @@ namespace AssetStudio
         private readonly HashSet<string> ambiguousScopedResources = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private readonly List<BinaryReader> retiredResourceReaders = new List<BinaryReader>();
         private readonly Dictionary<(SerializedFile, FileIdentifier), (int Count, SerializedFile File)> resolvedExternals = new Dictionary<(SerializedFile, FileIdentifier), (int, SerializedFile)>();
+        private int referenceIndexCount = -1;
+        private readonly Dictionary<string, Dictionary<long, SerializedFile>> sourceObjects = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, List<SerializedFile>> filesByName = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, SerializedFile> filesByIdentity = new(StringComparer.OrdinalIgnoreCase);
+        private void ClearReferenceIndex()
+        {
+            referenceIndexCount = -1; sourceObjects.Clear(); filesByName.Clear(); filesByIdentity.Clear();
+        }
+        private void EnsureReferenceIndex()
+        {
+            if (referenceIndexCount == assetsFileList.Count) return;
+            ClearReferenceIndex();
+            foreach (var file in assetsFileList)
+            {
+                if (!filesByIdentity.TryAdd(file.fullName, file)) filesByIdentity[file.fullName] = null;
+                if (!filesByName.TryGetValue(file.fileName, out var names)) filesByName.Add(file.fileName, names = new());
+                names.Add(file);
+                if (string.IsNullOrEmpty(file.originalPath)) continue;
+                if (!sourceObjects.TryGetValue(file.originalPath, out var objects)) sourceObjects.Add(file.originalPath, objects = new());
+                foreach (var metadata in file.m_Objects)
+                    if (!objects.TryAdd(metadata.m_PathID, file)) objects[metadata.m_PathID] = null;
+            }
+            referenceIndexCount = assetsFileList.Count;
+        }
         internal static string ResourceKey(string source, string name) => Path.GetFullPath(source) + "|" + name.Replace('\\', '/');
         private static string ReferenceName(string path) => Path.GetFileName(path.Replace('\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar));
         private static bool HasExplicitDirectory(string reference) => !reference.StartsWith("archive:/", StringComparison.OrdinalIgnoreCase) && (reference.Contains('/') || reference.Contains('\\'));
@@ -67,10 +91,12 @@ namespace AssetStudio
             // QTS can split a prefab and its clips into separate SerializedFiles
             // with GUID-only external slots. A unique PathID in the exact same
             // source DB is safe to resolve; other DBs/directories never qualify.
-            var matches = assetsFileList.Where(f => string.Equals(f.originalPath, owner.originalPath, StringComparison.OrdinalIgnoreCase)
-                && f.ObjectsDic.ContainsKey(pathId)).Take(2).ToArray();
-            if (matches.Length == 1) return matches[0];
-            if (matches.Length > 1) Logger.Warning($"Ambiguous HOK object reference {pathId} from {owner.fullName}; no target selected.");
+            EnsureReferenceIndex();
+            if (sourceObjects.TryGetValue(owner.originalPath, out var objects) && objects.TryGetValue(pathId, out var match))
+            {
+                if (match != null) return match;
+                Logger.Warning($"Ambiguous HOK object reference {pathId} from {owner.fullName}; no target selected.");
+            }
             return null;
         }
         private SerializedFile ResolveExternalUncached(SerializedFile owner, FileIdentifier external)
@@ -79,9 +105,9 @@ namespace AssetStudio
             if (string.IsNullOrEmpty(name)) return null;
             string reference = string.IsNullOrEmpty(external.pathName) ? name : external.pathName;
             // A Set() reference to an already loaded exact identity needs no guess.
-            var explicitMatch = assetsFileList.Where(f => string.Equals(f.fullName, reference, StringComparison.OrdinalIgnoreCase)).ToArray();
-            if (explicitMatch.Length == 1) return explicitMatch[0];
-            var matches = assetsFileList.Where(f => f.fileName.Equals(name, StringComparison.OrdinalIgnoreCase)).ToArray();
+            EnsureReferenceIndex();
+            if (filesByIdentity.TryGetValue(reference, out var explicitMatch) && explicitMatch != null) return explicitMatch;
+            var matches = filesByName.TryGetValue(name, out var namedFiles) ? namedFiles.ToArray() : Array.Empty<SerializedFile>();
             if (owner.originalPath != null)
             {
                 matches = matches.Where(f => string.Equals(f.originalPath, owner.originalPath, StringComparison.OrdinalIgnoreCase)).ToArray();

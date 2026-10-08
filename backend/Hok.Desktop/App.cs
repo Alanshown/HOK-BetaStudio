@@ -16,14 +16,17 @@ internal sealed class MainWindow:Window {
  readonly WebView2 browser=new();readonly string root=AppContext.BaseDirectory;
  readonly string data=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"HokBetaStudio");
  readonly CatalogService catalog;
- readonly string cache;readonly WorkerClient worker,previewWorker,exportWorker; readonly SemaphoreSlim requests=new(1,1),previewLane=new(1,1),exportLane=new(1,1);
- DbRecord[] activeFiles=[];int previewGeneration=-1,previewEpoch,exportEpoch;bool closing,resetting;
+ readonly string cache,previewCache,exportCache;readonly WorkerClient worker,previewWorker,exportWorker; readonly SemaphoreSlim requests=new(1,1),previewLane=new(1,1),exportLane=new(1,1);
+ Task previewCleanup=Task.CompletedTask;
+ bool sharedHeavyLane;CancellationTokenSource previewCancellation=new(),exportCancellation=new();
+ DbRecord[] activeFiles=[];int previewGeneration=-1,previewEpoch,previewRequest,exportEpoch;bool closing,resetting;
  readonly string[] args; List<DbRecord> files=[];int generation;CancellationTokenSource? scanCancel;
  public MainWindow(string[] startup){
   args=startup;
   if(args.Contains("--smoke")){var isolated=args.FirstOrDefault(a=>a.StartsWith("--smoke-data=",StringComparison.Ordinal));if(isolated is not null)data=Path.GetFullPath(isolated[13..]);}
   Directory.CreateDirectory(data);catalog=new(Path.Combine(data,"catalog"),Path.Combine(root,"assets/catalog/remote-index.seed.json"),Path.Combine(root,"assets/catalog/corrections.default.json"));cache=Path.Combine(data,"cache",Guid.NewGuid().ToString("N"));Directory.CreateDirectory(cache);
-  worker=new(root,cache,Path.Combine(data,"worker.log"));previewWorker=new(root,cache,Path.Combine(data,"preview.log"));exportWorker=new(root,cache,Path.Combine(data,"export.log"));Title="HOK BetaStudio";Width=1440;Height=920;MinWidth=1000;MinHeight=700;WindowStartupLocation=WindowStartupLocation.CenterScreen;
+  previewCache=Path.Combine(cache,Guid.NewGuid().ToString("N"));exportCache=Path.Combine(cache,Guid.NewGuid().ToString("N"));
+  worker=new(root,cache,Path.Combine(data,"worker.log"));previewWorker=new(root,previewCache,Path.Combine(data,"preview.log"));exportWorker=new(root,exportCache,Path.Combine(data,"export.log"));Title="HOK BetaStudio";Width=1440;Height=920;MinWidth=1000;MinHeight=700;WindowStartupLocation=WindowStartupLocation.CenterScreen;
   var icon=Path.Combine(root,"assets/icons/app/app-icon-hok-256.png");if(File.Exists(icon))Icon=new BitmapImage(new Uri(icon));
   if(args.Contains("--smoke")){WindowState=WindowState.Minimized;ShowInTaskbar=false;}
   Content=browser;Loaded+=async(_,_)=>await Init();Closed+=(_,_)=>{closing=true;catalog.Dispose();scanCancel?.Cancel();worker.Dispose();previewWorker.Dispose();exportWorker.Dispose();browser.Dispose();};
@@ -59,9 +62,10 @@ internal sealed class MainWindow:Window {
    if(method=="cancel"){
     var lane=p.TryGetProperty("lane",out var value)?value.GetString():"all";
     if(lane is not ("parse" or "preview" or "export" or "all"))throw new InvalidOperationException("Invalid worker lane");
-    if(lane is "export" or "all"){exportEpoch++;exportWorker.Cancel();}
-    if(lane is "parse" or "preview" or "all"){previewEpoch++;previewWorker.Cancel();previewGeneration=-1;}
+    if(lane is "export" or "all"){exportEpoch++;RenewCancellation(ref exportCancellation);exportWorker.Cancel();}
+    if(lane is "parse" or "preview" or "all"){previewEpoch++;RenewCancellation(ref previewCancellation);previewWorker.Cancel();previewGeneration=-1;}
     if(lane is "parse" or "all"){scanCancel?.Cancel();worker.Cancel();activeFiles=[];generation++;}
+    if(lane=="preview"){previewCleanup=ReleasePreview();await previewCleanup;}
     Reply(id,new{cancelled=true});return;
    }
    if(method is "preview" or "dump" or "bank" or "export"){Reply(id,await Dispatch(method,p));return;}
@@ -81,8 +85,14 @@ internal sealed class MainWindow:Window {
  void Reply(string id,object? result){if(!closing)browser.CoreWebView2.PostWebMessageAsJson(JsonSerializer.Serialize(new{id,ok=true,data=result},App.Json));}
  void InvalidateWorkspace(){
   scanCancel?.Cancel();generation++;previewEpoch++;exportEpoch++;
+  RenewCancellation(ref previewCancellation);RenewCancellation(ref exportCancellation);
   worker.Cancel();previewWorker.Cancel();exportWorker.Cancel();
   activeFiles=[];files=[];previewGeneration=-1;
+ }
+ static void RenewCancellation(ref CancellationTokenSource value){var old=value;value=new();old.Cancel();old.Dispose();}
+ async Task ReleasePreview(){
+  await previewLane.WaitAsync();try{if(sharedHeavyLane&&activeFiles.Length>0&&!closing)await worker.Call("releasePreview",new{});await previewWorker.StopAsync();await Task.Run(()=>OwnedCache.Clear(previewCache,cache));}
+  finally{previewLane.Release();}
  }
  async Task<long> ReleaseWorkspace(){
   await Task.WhenAll(worker.StopAsync(),previewWorker.StopAsync(),exportWorker.StopAsync());
@@ -115,10 +125,19 @@ internal sealed class MainWindow:Window {
     string skinId=p.GetProperty("skinId").GetString()!;string? dbId=p.TryGetProperty("dbId",out var d)?d.GetString():null;
     var selected=Scanner.SelectPackageFiles(files,skinId,dbId);
     foreach(var f in selected){var fi=new FileInfo(f.Path);if(!fi.Exists||$"{fi.Length}:{fi.LastWriteTimeUtc.Ticks}"!=f.Fingerprint)throw new IOException("Source file changed; open the workspace again.");}
-    previewEpoch++;previewWorker.Cancel();previewGeneration=-1;activeFiles=[];var version=++generation;
-    var result=await worker.Call("load",new{paths=selected.Select(f=>f.Path).ToArray()});if(version!=generation)throw new OperationCanceledException();activeFiles=selected;return new{generation,result};
+    previewEpoch++;RenewCancellation(ref previewCancellation);previewWorker.Cancel();previewGeneration=-1;activeFiles=[];var version=++generation;
+    var result=await worker.Call("load",new{paths=selected.Select(f=>f.Path).ToArray(),dependencyPaths=files.Select(f=>f.Path).ToArray()});if(version!=generation)throw new OperationCanceledException();activeFiles=selected;
+    // Reusing the indexed worker avoids two or three multi-GiB copies for
+    // large DBs. Small DBs keep independent preview/export workers.
+    sharedHeavyLane=result.GetProperty("count").GetInt32()>100000||result.GetProperty("retainedManagedBytes").GetInt64()>512L*1024*1024;
+    return new{generation,result};
    }
    case "list":return await worker.Call("list",p);
+   case "rawList":case "rawDetail":return await worker.Call(method,p);
+   case "rawExport":{
+    VerifySnapshot(activeFiles);var output=PickExportFolder();if(output is null)return null;
+    return await worker.Call("rawExport",new{ids=p.GetProperty("ids"),output});
+   }
    case "replacementState":return await worker.Call("replacementState",p);
    case "replace":{
     if(activeFiles.Length==0)throw new InvalidOperationException("No active package");
@@ -142,24 +161,30 @@ internal sealed class MainWindow:Window {
    }
    case "neighbors":return await worker.Call("neighbors",p);
    case "preview":case "dump":case "bank":{
-    var snapshot=activeFiles.ToArray();var version=generation;var ticket=previewEpoch;if(snapshot.Length==0)throw new InvalidOperationException("No active assets");
+    var snapshot=activeFiles.ToArray();var version=generation;var ticket=previewEpoch;var cancellation=previewCancellation.Token;int request=++previewRequest;if(snapshot.Length==0)throw new InvalidOperationException("No active assets");
+    await previewCleanup;
     await previewLane.WaitAsync();try{
-     if(ticket!=previewEpoch||version!=generation)throw new OperationCanceledException();VerifySnapshot(snapshot);
-     if(previewGeneration!=version){await previewWorker.Call("load",new{paths=snapshot.Select(f=>f.Path).ToArray()});previewGeneration=version;}
-     if(ticket!=previewEpoch||version!=generation)throw new OperationCanceledException();
-     var response=await previewWorker.Call(method,p);if(ticket!=previewEpoch||version!=generation)throw new IOException("Preview cancelled or workspace changed");
-     if(method is "dump" or "bank")return response;
+     if(ticket!=previewEpoch||version!=generation||request!=previewRequest)throw new OperationCanceledException();VerifySnapshot(snapshot);
+     var client=sharedHeavyLane?worker:previewWorker;
+     if(!sharedHeavyLane&&previewGeneration!=version){await previewWorker.Call("load",new{paths=snapshot.Select(f=>f.Path).ToArray(),dependencyPaths=files.Select(f=>f.Path).ToArray()},cancellation);previewGeneration=version;}
+     if(ticket!=previewEpoch||version!=generation||request!=previewRequest)throw new OperationCanceledException();
+     object payload=method=="preview"?new{assetId=p.GetProperty("assetId").GetString(),output=previewCache}:p;
+     var response=await client.Call(method,payload,cancellation);if(ticket!=previewEpoch||version!=generation)throw new IOException("Preview cancelled or workspace changed");
+     if(method=="bank")return response;
+     var asset=await client.Call("asset",new{assetId=p.GetProperty("assetId").GetString()},cancellation);
+     if(ticket!=previewEpoch||version!=generation)throw new IOException("Preview cancelled or workspace changed");
+     if(method=="dump")return new{text=response.GetProperty("text").GetString(),asset};
      var file=response.GetProperty("file").GetString()!;if(Path.GetFileName(file)!=file)throw new IOException("Invalid preview path");
-     return new{url="https://preview.hok.local/"+Uri.EscapeDataString(file),kind=response.GetProperty("kind").GetString(),warnings=response.TryGetProperty("warnings",out var warnings)?warnings.Clone():(JsonElement?)null,animation=response.TryGetProperty("animation",out var animation)?animation.GetString():null};
+     return new{url="https://preview.hok.local/"+Path.GetFileName(previewCache)+"/"+Uri.EscapeDataString(file),kind=response.GetProperty("kind").GetString(),asset,warnings=response.TryGetProperty("warnings",out var warnings)?warnings.Clone():(JsonElement?)null,animation=response.TryGetProperty("animation",out var animation)?animation.GetString():null};
     }finally{previewLane.Release();}
    }
    case "export":{
-    var snapshot=activeFiles.ToArray();var ticket=exportEpoch;if(snapshot.Length==0)throw new InvalidOperationException("No active assets");
-    var dialog=new OpenFolderDialog{Multiselect=false};if(dialog.ShowDialog(this)!=true)return null;
-    await exportLane.WaitAsync();try{if(ticket!=exportEpoch)throw new OperationCanceledException();VerifySnapshot(snapshot);await exportWorker.Call("load",new{paths=snapshot.Select(f=>f.Path).ToArray()});
+    var snapshot=activeFiles.ToArray();var ticket=exportEpoch;var version=generation;var shared=sharedHeavyLane;var cancellation=exportCancellation.Token;if(snapshot.Length==0)throw new InvalidOperationException("No active assets");
+    var output=PickExportFolder();if(output is null)return null;
+    await exportLane.WaitAsync(cancellation);try{if(ticket!=exportEpoch)throw new OperationCanceledException();VerifySnapshot(snapshot);if(!shared)await exportWorker.Call("load",new{paths=snapshot.Select(f=>f.Path).ToArray(),dependencyPaths=files.Select(f=>f.Path).ToArray()},cancellation);
      if(ticket!=exportEpoch)throw new OperationCanceledException();VerifySnapshot(snapshot);
-     return await exportWorker.Call("export",new{assetIds=p.GetProperty("assetIds"),format=p.GetProperty("format").GetString(),output=dialog.FolderName,options=p.GetProperty("options")});
-    }finally{exportLane.Release();}
+     return await (shared?worker:exportWorker).Call("export",new{assetIds=p.GetProperty("assetIds"),format=p.GetProperty("format").GetString(),output,options=p.GetProperty("options")},cancellation);
+    }finally{try{if(shared&&version==generation&&!closing)await worker.Call("releasePreview",new{});await exportWorker.StopAsync();await Task.Run(()=>OwnedCache.Clear(exportCache,cache));}finally{exportLane.Release();}}
    }
    case "exportList":{
     var dialog=new SaveFileDialog{Filter="JSON (*.json)|*.json",FileName="workspace-assets.json"};if(dialog.ShowDialog(this)!=true)return null;
@@ -169,5 +194,10 @@ internal sealed class MainWindow:Window {
    case "logs":return new{text=string.Join("\n",new[]{"worker.log","preview.log","export.log"}.Where(n=>File.Exists(Path.Combine(data,n))).Select(n=>n+"\n"+string.Join('\n',File.ReadLines(Path.Combine(data,n)).TakeLast(80))))};
    default:throw new InvalidOperationException("Unsupported desktop operation");
   }
+ }
+ string? PickExportFolder(){
+  var testPath=args.Contains("--smoke")?args.FirstOrDefault(a=>a.StartsWith("--smoke-output=",StringComparison.Ordinal))?[15..]:null;
+  if(testPath is not null)return Path.GetFullPath(testPath);
+  var dialog=new OpenFolderDialog{Multiselect=false};return dialog.ShowDialog(this)==true?dialog.FolderName:null;
  }
 }

@@ -11,6 +11,9 @@ namespace AssetStudio
     {
         public List<PPtr<Component>> m_Components;
         public string m_Name;
+        public int m_Layer;
+        public ushort m_Tag;
+        public bool m_IsActive;
 
         public Transform m_Transform;
         public MeshRenderer m_MeshRenderer;
@@ -33,8 +36,13 @@ namespace AssetStudio
                 m_Components.Add(new PPtr<Component>(reader));
             }
 
-            var m_Layer = reader.ReadInt32();
+            m_Layer = reader.ReadInt32();
             m_Name = reader.ReadAlignedString();
+            if (reader.Game.Type.IsHonorOfKings())
+            {
+                m_Tag = reader.ReadUInt16();
+                m_IsActive = reader.ReadBoolean();
+            }
         }
 
         public bool HasModel() => HasMesh(m_Transform, new List<bool>());
