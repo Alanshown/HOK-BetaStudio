@@ -15,9 +15,9 @@ namespace AssetStudio
         private BuildTarget platform;
         private int outPutSize;
 
-        public Texture2DConverter(Texture2D m_Texture2D)
+        public Texture2DConverter(Texture2D m_Texture2D, ResourceReader imageData = null)
         {
-            reader = m_Texture2D.image_data;
+            reader = imageData ?? m_Texture2D.image_data;
             m_Width = m_Texture2D.m_Width;
             m_Height = m_Texture2D.m_Height;
             m_TextureFormat = m_Texture2D.m_TextureFormat;

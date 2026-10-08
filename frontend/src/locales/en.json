@@ -13,6 +13,7 @@
   "seekAudio": "Playback position",
   "volumeAudio": "Volume",
   "audioError": "Audio playback failed. Try exporting the original file.",
+  "audioFormatHint": "BNK is a sound bank and WEM is Wwise-encoded media. Use Wwise-compatible tools for these files; choose MP3 for general-purpose players.",
   "file": "File",
   "openFiles": "Open files",
   "openFolder": "Open folder",
@@ -139,5 +140,11 @@
   "animationProperties": "This clip includes custom property or object-swap tracks. Only supported model/skeleton tracks are played.",
   "animationIncomplete": "Combined preview has limitations",
   "animationParticles": "Related particles were found, but Unity particle simulation and custom shaders are not yet reproduced by this viewer.",
-  "animationNoModel": "No verified related model was found; unrelated models are never substituted. Original animation export remains available."
+  "animationNoModel": "No verified related model was found; unrelated models are never substituted. Original animation export remains available.",
+  "animationCurveOnly": "No confirmed model reference. Original keyframes are shown; lines visualize samples, not particle or material simulation.",
+  "animationTrack": "Track",
+  "animationKeyframes": "Keyframe",
+  "parseDeferred": "Decoded on demand",
+  "bankSelectAudio": "Select an audio item to load its preview",
+  "fontSample": "Type text to preview the font"
 }

@@ -73,6 +73,13 @@ namespace AssetStudio
     {
         public PPtr<Shader> m_Shader;
         public UnityPropertySheet m_SavedProperties;
+        public List<KeyValuePair<string,string>> m_BuildTextureStacks;
+        public object m_ShaderKeywords;
+        public string[] m_ValidKeywords, m_InvalidKeywords, disabledShaderPasses;
+        public uint m_LightmapFlags;
+        public bool m_EnableInstancingVariants, m_DoubleSidedGI;
+        public int m_CustomRenderQueue;
+        public List<KeyValuePair<string,string>> stringTagMap = new List<KeyValuePair<string,string>>();
 
         public Material(ObjectReader reader) : base(reader)
         {
@@ -80,34 +87,34 @@ namespace AssetStudio
 
             if (version[0] == 4 && version[1] >= 1) //4.x
             {
-                var m_ShaderKeywords = reader.ReadStringArray();
+                m_ShaderKeywords = reader.ReadStringArray();
             }
 
             if (version[0] > 2021 || (version[0] == 2021 && version[1] >= 3)) //2021.3 and up
             {
-                var m_ValidKeywords = reader.ReadStringArray();
-                var m_InvalidKeywords = reader.ReadStringArray();
+                m_ValidKeywords = reader.ReadStringArray();
+                m_InvalidKeywords = reader.ReadStringArray();
             }
             else if (version[0] >= 5) //5.0 ~ 2021.2
             {
-                var m_ShaderKeywords = reader.ReadAlignedString();
+                m_ShaderKeywords = reader.ReadAlignedString();
             }
 
             if (version[0] >= 5) //5.0 and up
             {
-                var m_LightmapFlags = reader.ReadUInt32();
+                m_LightmapFlags = reader.ReadUInt32();
             }
 
             if (version[0] > 5 || (version[0] == 5 && version[1] >= 6)) //5.6 and up
             {
-                var m_EnableInstancingVariants = reader.ReadBoolean();
-                //var m_DoubleSidedGI = a_Stream.ReadBoolean(); //2017 and up
+                m_EnableInstancingVariants = reader.ReadBoolean();
+                if (version[0] >= 2017) m_DoubleSidedGI = reader.ReadBoolean();
                 reader.AlignStream();
             }
 
             if (version[0] > 4 || (version[0] == 4 && version[1] >= 3)) //4.3 and up
             {
-                var m_CustomRenderQueue = reader.ReadInt32();
+                m_CustomRenderQueue = reader.ReadInt32();
             }
 
             if (reader.Game.Type.IsLoveAndDeepspace())
@@ -122,6 +129,7 @@ namespace AssetStudio
                 {
                     var first = reader.ReadAlignedString();
                     var second = reader.ReadAlignedString();
+                    stringTagMap.Add(new(first, second));
                 }
             }
 
@@ -132,12 +140,18 @@ namespace AssetStudio
 
             if (version[0] > 5 || (version[0] == 5 && version[1] >= 6)) //5.6 and up
             {
-                var disabledShaderPasses = reader.ReadStringArray();
+                disabledShaderPasses = reader.ReadStringArray();
             }
 
             m_SavedProperties = new UnityPropertySheet(reader);
 
-            //vector m_BuildTextureStacks 2020 and up
+            if (version[0] >= 2020)
+            {
+                int count=reader.ReadInt32();
+                if(count<0||count>(reader.byteStart+reader.byteSize-reader.Position)/8)throw new System.IO.InvalidDataException("Invalid material texture-stack count");
+                m_BuildTextureStacks=new List<KeyValuePair<string,string>>(count);
+                for(int i=0;i<count;i++)m_BuildTextureStacks.Add(new(reader.ReadAlignedString(),reader.ReadAlignedString()));
+            }
         }
     }
 }

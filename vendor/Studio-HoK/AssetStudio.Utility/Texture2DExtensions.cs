@@ -15,9 +15,9 @@ namespace AssetStudio
             _configuration = Configuration.Default.Clone();
             _configuration.PreferContiguousImageBuffers = true;
         }
-        public static Image<Bgra32> ConvertToImage(this Texture2D m_Texture2D, bool flip)
+        public static Image<Bgra32> ConvertToImage(this Texture2D m_Texture2D, bool flip, ResourceReader imageData = null)
         {
-            var converter = new Texture2DConverter(m_Texture2D);
+            var converter = new Texture2DConverter(m_Texture2D, imageData);
             var buff = ArrayPool<byte>.Shared.Rent(m_Texture2D.m_Width * m_Texture2D.m_Height * 4);
             try
             {

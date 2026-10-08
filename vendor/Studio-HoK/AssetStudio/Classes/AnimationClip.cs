@@ -1130,8 +1130,27 @@ namespace AssetStudio
             sizeField = reader.ReadUInt32(); clip = new Clip(reader);
             // The older UInt16 layout has an additional word. Bit-packed dense
             // groups are followed directly by the clip time range.
-            if (sizeField != 0 && !clip.m_DenseClip.m_HokRanges.Any(r => r.BitWidth != 0)) unknownWord = reader.ReadUInt32();
+            long tail = reader.Position;
+            bool legacyWord = sizeField != 0 && clip.m_DenseClip.m_HokCompressedSamples.Length > 0 &&
+                !clip.m_DenseClip.m_HokRanges.Any(r => r.BitWidth != 0);
+            try { ReadTail(reader, legacyWord); }
+            catch (Exception first) when (first is InvalidDataException || first is EndOfStreamException || first is OverflowException)
+            {
+                // Streamed/constant-only clips exist in both revisions, so an
+                // empty dense table cannot identify the tail layout. Validate
+                // the complete name/path/binding tables at the alternate offset.
+                reader.Position = tail;
+                try { ReadTail(reader, !legacyWord); }
+                catch (Exception second) when (second is InvalidDataException || second is EndOfStreamException || second is OverflowException)
+                { throw new InvalidDataException($"Invalid HOK legacy tail in both layouts: {first.Message}; {second.Message}", second); }
+            }
+        }
+        private void ReadTail(ObjectReader reader, bool extraWord)
+        {
+            unknownWord = extraWord ? reader.ReadUInt32() : null;
             startTime = reader.ReadSingle(); stopTime = reader.ReadSingle();
+            if (!float.IsFinite(startTime) || !float.IsFinite(stopTime) || stopTime < startTime)
+                throw new InvalidDataException("Invalid HOK legacy time interval.");
             names = reader.ReadStringArray(); pathIndices = reader.ReadInt32Array();
             int count = reader.ReadInt32();
             if (count < 0 || count > reader.byteSize / 24) throw new InvalidDataException("Invalid HOK legacy binding count.");
@@ -1195,9 +1214,20 @@ namespace AssetStudio
                     : r.GroupType == 1 ? 3 + r.BitWidth * 3 : r.Dimension * r.BitWidth;
             }
             long wordsPerFrame = (bitsPerFrame + 15) / 16;
+            // HOK's bit writer can retain its empty next word when the frame
+            // ends exactly on a word boundary. This is per-frame padding, not
+            // another curve. Accept it only when every retained word is zero.
+            if (bitsPerFrame > 0 && bitsPerFrame % 16 == 0 &&
+                words.LongLength == frames * (wordsPerFrame + 1))
+            {
+                for (int f = 0; f < frames; f++)
+                    if (words[(f + 1) * (wordsPerFrame + 1) - 1] != 0)
+                        throw new InvalidDataException("Nonzero HOK dense frame padding.");
+                wordsPerFrame++;
+            }
             long count = (long)frames * curves;
             if (wordsPerFrame * frames != words.LongLength || count > 128 * 1024 * 1024)
-                throw new InvalidDataException("HOK dense packed frame length mismatch or excessive decoded sample count.");
+                throw new InvalidDataException($"HOK dense packed frame length mismatch: frames={frames}, curves={curves}, words={words.Length}, bitsPerFrame={bitsPerFrame}, kinds={string.Join(',',ranges.Select(r=>r.kind))}.");
             var result = new float[checked((int)count)];
             int output = 0;
             for (int frame = 0; frame < frames; frame++)

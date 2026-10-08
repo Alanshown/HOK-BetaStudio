@@ -13,6 +13,7 @@
   "seekAudio": "播放进度",
   "volumeAudio": "音量",
   "audioError": "音频播放失败，请尝试导出原始文件。",
+  "audioFormatHint": "BNK 是音频封包，WEM 是 Wwise 编码音频，需要支持 Wwise 的工具；通用播放器请使用 MP3。",
   "file": "文件",
   "openFiles": "打开文件",
   "openFolder": "打开文件夹",
@@ -139,5 +140,11 @@
   "animationProperties": "片段包含自定义属性或对象切换轨道，当前预览器仅播放可支持的模型/骨骼轨道。",
   "animationIncomplete": "组合预览存在限制",
   "animationParticles": "关联粒子已识别，但当前预览器尚不能还原 Unity 粒子模拟和自定义着色器。",
-  "animationNoModel": "未找到可确认关联的模型；不会自动选择无关模型。原始动画仍可导出。"
+  "animationNoModel": "未找到可确认关联的模型；不会自动选择无关模型。原始动画仍可导出。",
+  "animationCurveOnly": "未找到明确关联的模型，当前显示原始关键帧数据；折线用于查看采样值，不模拟粒子或材质效果。",
+  "animationTrack": "轨道",
+  "animationKeyframes": "关键帧",
+  "parseDeferred": "按需解码",
+  "bankSelectAudio": "选择左侧音频后加载预览",
+  "fontSample": "输入文字预览字体"
 }

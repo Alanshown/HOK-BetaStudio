@@ -101,14 +101,14 @@ namespace AssetStudio
 		public Emitter Write(float value)
 		{
 			WriteDelayed();
-			m_stream.Write(value);
+			m_stream.Write(YAMLScalarNode.FormatFloat(value));
 			return this;
 		}
 
 		public Emitter Write(double value)
 		{
 			WriteDelayed();
-			m_stream.Write(value);
+			m_stream.Write(YAMLScalarNode.FormatFloat(value));
 			return this;
 		}
 

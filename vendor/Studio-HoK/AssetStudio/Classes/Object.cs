@@ -23,8 +23,12 @@ namespace AssetStudio
         public SerializedType serializedType;
         [JsonIgnore]
         public uint byteSize;
+        [JsonIgnore]
+        public bool UseTypeTree;
 
-        public virtual string Name => string.Empty;
+        [JsonIgnore]
+        public string SchemaName;
+        public virtual string Name => SchemaName ?? string.Empty;
 
         public Object(ObjectReader reader)
         {

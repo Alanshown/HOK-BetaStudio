@@ -10,36 +10,65 @@ internal static class Exporters {
  static bool FbxReady=>File.Exists(Path.Combine(AppContext.BaseDirectory,"x64/AssetStudio.FBXNative.dll"));
  static bool AudioReady=>File.Exists(Path.Combine(AppContext.BaseDirectory,"x64/fmod.dll"));
  public static string[] Formats(Obj obj) => obj switch {
+  DeferredObject d when d.type==ClassIDType.Mesh=>["obj","json","raw"],
+  DeferredObject d when d.type==ClassIDType.AnimationClip=>["anim","curves-json","json","raw"],
+  DeferredObject d when d.type==ClassIDType.Shader=>["shader","json","raw"],
+  DeferredObject d when d.type is ClassIDType.Font or ClassIDType.VideoClip or ClassIDType.MovieTexture=>["original","json","raw"],
+  DeferredObject d when d.type==ClassIDType.AudioClip=>AudioFormats(),
+  Cubemap=>["zip-png","png","json","raw"],
   Texture2D or Sprite=>["png","tga","bmp","jpg","raw"],
   Mesh=>["obj","json","raw"],
   Animator or GameObject when FbxReady=>["fbx","json","raw"],
   AudioClip when AudioReady&&AudioTools.Mp3Ready=>["wav","mp3","original","raw"],
   AudioClip when AudioReady=>["wav","original","raw"],
   AudioClip=>["original","raw"],
-  AnimationClip=>["anim","json","raw"],
+  AnimationClip=>["anim","curves-json","json","raw"],
   TextAsset=>["original","json","raw"],
   Shader=>["shader","json","raw"],
   Font or VideoClip or MovieTexture=>["original","json","raw"],
   _=>["json","raw"]
  };
- public static string Extension(Obj obj,string format)=>format switch {
-  "raw"=>"dat","original"=>obj switch{AudioClip a=>new AudioClipConverter(a).GetExtensionName().TrimStart('.'),Font f=>f.m_FontData?.Take(4).SequenceEqual("OTTO"u8.ToArray())==true?"otf":"ttf",VideoClip v=>SafeExt(Path.GetExtension(v.m_OriginalPath),"video"),MovieTexture=>"ogv",TextAsset t=>SafeExt(Path.GetExtension(t.Name),"bytes"),_=>"bin"},_=>format};
+ static string[] AudioFormats()=>AudioReady?(AudioTools.Mp3Ready?["wav","mp3","original","raw"]:["wav","original","raw"]):["original","raw"];
+ public static string Extension(Obj obj,string format){if(format=="original")obj=DeferredObject.Resolve(obj);return format switch {
+  "zip-png"=>"zip",
+  "curves-json"=>"json",
+  "raw"=>"dat","original"=>obj switch{AudioClip a=>new AudioClipConverter(a).GetExtensionName().TrimStart('.'),Font f=>f.m_FontData?.Take(4).SequenceEqual("OTTO"u8.ToArray())==true?"otf":"ttf",VideoClip v=>SafeExt(Path.GetExtension(v.m_OriginalPath),"video"),MovieTexture=>"ogv",TextAsset t=>SafeExt(Path.GetExtension(t.Name),"bytes"),_=>"bin"},_=>format};}
  static string SafeExt(string ext,string fallback){var s=ext.TrimStart('.');return s.Length is >0 and <12 && s.All(char.IsAsciiLetterOrDigit)?s:fallback;}
- public static string ToJson(Obj obj){object value=obj;if(obj is MonoBehaviour){value=obj.ToType()??(object)new{type=obj.type.ToString(),pathId=obj.m_PathID.ToString(),note="Type tree unavailable; raw bytes are available."};}
+ public static string ToJson(Obj obj){obj=DeferredObject.Resolve(obj);object value=obj;if(obj.UseTypeTree){value=obj.ToType()??throw new InvalidDataException("Validated type tree unavailable");}
+  else if(obj is MonoBehaviour mono){
+   obj.assetsFile.ParseStatuses.TryGetValue(obj.m_PathID,out var state);
+   var raw=obj.GetRawData();int consumed=checked((int)(state?.ConsumedBytes??0));
+   value=new{type=obj.type.ToString(),classId=(int)obj.type,pathId=obj.m_PathID.ToString(),parseStatus=state?.Status??"typed-partial",complete=state?.RemainingBytes==0,
+    baseFields=new{mono.m_Name,mono.m_Enabled,gameObject=new{mono.m_GameObject.m_FileID,pathId=mono.m_GameObject.m_PathID.ToString()},script=new{mono.m_Script.m_FileID,pathId=mono.m_Script.m_PathID.ToString()}},
+    managedTypes=obj.assetsFile.m_RefTypes?.Select(t=>new{index=t.m_ScriptTypeIndex,className=t.m_KlassName,nameSpace=t.m_NameSpace,assembly=t.m_AsmName,typeHash=t.m_OldTypeHash==null?null:Convert.ToHexString(t.m_OldTypeHash)}),
+    typeDependencies=obj.serializedType?.m_TypeDependencies,consumedBytes=consumed,unparsedBytes=raw.Length-consumed,
+    unparsedHex=Convert.ToHexString(raw.AsSpan(consumed)),note="Base fields and retained managed-reference type metadata. Script-specific payload fields require a matching schema; this is not a complete semantic export."};
+  }
+  else if(obj is ShaderVariantCollection variants){
+   obj.assetsFile.ParseStatuses.TryGetValue(obj.m_PathID,out var state);
+   var raw=obj.GetRawData();int consumed=checked((int)(state?.ConsumedBytes??0));
+   value=new{type="ShaderVariantCollection",variants.m_Name,variants.m_Shaders,
+    parseStatus=state?.Status,complete=state?.RemainingBytes==0,consumedBytes=consumed,unparsedBytes=raw.Length-consumed,
+    unparsedHex=Convert.ToHexString(raw.AsSpan(consumed)),
+    note="Shader references, keywords and pass types are decoded. Any HOK extension bytes remain explicitly unparsed; this export is not a complete platform pipeline-state cache."};
+  }
   return JsonConvert.SerializeObject(value,Formatting.Indented,new JsonSerializerSettings{ReferenceLoopHandling=ReferenceLoopHandling.Ignore,MaxDepth=64,Converters={new StringEnumConverter()}});
  }
  public static void Write(Obj obj,string format,string path,ExportOptions options) {
   if(!Formats(obj).Contains(format))throw new NotSupportedException(format);
+  if(format!="raw")obj=DeferredObject.Resolve(obj);
   Directory.CreateDirectory(Path.GetDirectoryName(path)!);
   switch(format){
+   case "zip-png":CubemapImages.WriteArchive((Cubemap)obj,path);break;
+   case "curves-json":File.WriteAllText(path,System.Text.Json.JsonSerializer.Serialize(AnimationCurves.Read((AnimationClip)obj),Program.Json));break;
    case "raw":File.WriteAllBytes(path,obj.GetRawData());break;
    case "json":File.WriteAllText(path,ToJson(obj));break;
    case "png":case "tga":case "jpg":case "bmp":
-    using(var image=obj switch{Texture2D t=>t.ConvertToImage(true),Sprite s=>s.GetImage(),_=>null}){
+    using(var image=obj switch{Cubemap cube=>CubemapImages.ContactSheet(cube),Texture2D t=>t.ConvertToImage(true),Sprite s=>s.GetImage(),_=>null}){
      if(image is null)throw new InvalidDataException("Image decoding failed");using var stream=File.Create(path);image.WriteToStream(stream,format switch{"tga"=>ImageFormat.Tga,"bmp"=>ImageFormat.Bmp,"jpg"=>ImageFormat.Jpeg,_=>ImageFormat.Png});
     }break;
    case "obj":WriteObj((Mesh)obj,path);break;
-   case "wav":var wav=new AudioClipConverter((AudioClip)obj).ConvertToWav();if(wav is null||wav.Length<=44)throw new InvalidDataException("Audio decoding failed");File.WriteAllBytes(path,wav);break;
+   case "wav":var wav=new AudioClipConverter((AudioClip)obj).ConvertToWav();if(wav is null||wav.Length<=44)throw new InvalidDataException("Audio decoding failed");AudioValidation.ValidateWave(wav,true);AudioTools.WriteOriginal(wav,path);break;
    case "mp3":
     var temporaryWave=Path.Combine(AudioTools.Scratch,Guid.NewGuid().ToString("N")+".wav");
     try{Write(obj,"wav",temporaryWave,options);AudioTools.Mp3FromWave(temporaryWave,path);}finally{if(File.Exists(temporaryWave))File.Delete(temporaryWave);}

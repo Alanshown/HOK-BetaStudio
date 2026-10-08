@@ -29,6 +29,14 @@ namespace AssetStudio
             this.size = size;
         }
 
+        public ResourceReader Slice(long relativeOffset, long length)
+        {
+            if (relativeOffset < 0 || length < 0 || relativeOffset > size - length)
+                throw new InvalidDataException("Resource slice exceeds its parent range");
+            long start = checked(offset + relativeOffset);
+            return needSearch ? new ResourceReader(path, assetsFile, start, length) : new ResourceReader(reader, start, length);
+        }
+
         private BinaryReader GetReader()
         {
             if (needSearch)
@@ -43,7 +51,7 @@ namespace AssetStudio
                 if (assetsFile.game.Type.IsHonorOfKings())
                 {
                     var hashedPath = QtsVFSFile.Compute(path, true);
-                    if (assetsFile.assetsManager.TryGetResource(assetsFile, hashedPath.ToString(), out reader))
+                    if (assetsFile.assetsManager.TryGetResource(assetsFile, hashedPath.ToString(), out reader) || assetsFile.assetsManager.TryGetGlobalQtsResource(assetsFile, hashedPath, out reader))
                     {
                         needSearch = false;
                         return reader;

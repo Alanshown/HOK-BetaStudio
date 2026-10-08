@@ -9,6 +9,10 @@ namespace AssetStudio
     {
         public PPtr<AnimationClip> m_Animation;
         public List<PPtr<AnimationClip>> m_Animations;
+        public int m_WrapMode;
+        public bool m_PlayAutomatically;
+        public bool m_AnimatePhysics;
+        public int m_CullingType;
 
         public Animation(ObjectReader reader) : base(reader)
         {
@@ -18,6 +22,14 @@ namespace AssetStudio
             for (int i = 0; i < numAnimations; i++)
             {
                 m_Animations.Add(new PPtr<AnimationClip>(reader));
+            }
+            if (version[0] >= 5)
+            {
+                m_WrapMode = reader.ReadInt32();
+                m_PlayAutomatically = reader.ReadBoolean();
+                m_AnimatePhysics = reader.ReadBoolean();
+                reader.AlignStream();
+                m_CullingType = reader.ReadInt32();
             }
         }
     }

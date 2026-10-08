@@ -1,9 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><OutputType>Exe</OutputType></PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="../Hok.Legacy/Hok.Legacy.csproj" />
     <Compile Include="../Hok.Worker/ResourceAsset.cs" Link="ResourceAsset.cs" />
+    <Compile Include="../Hok.Worker/ResourceSliceStream.cs" Link="ResourceSliceStream.cs" />
+    <Compile Include="../Hok.Worker/HokStructured.cs" Link="HokStructured.cs" />
     <Compile Include="../Hok.Worker/WwiseIndex.cs" Link="WwiseIndex.cs" />
     <Compile Include="../Hok.Worker/AudioTools.cs" Link="AudioTools.cs" />
+    <Compile Include="../Hok.Worker/AudioValidation.cs" Link="AudioValidation.cs" />
     <Compile Include="../Hok.Worker/BankArchive.cs" Link="BankArchive.cs" />
     <Compile Include="../Hok.Desktop/OwnedCache.cs" Link="OwnedCache.cs" />
   </ItemGroup>

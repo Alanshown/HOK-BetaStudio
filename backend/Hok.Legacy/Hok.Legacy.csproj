@@ -5,6 +5,8 @@
 <Compile Include="../../vendor/Studio-HoK/AssetStudio.FBXWrapper/**/*.cs" Link="Fbx/%(RecursiveDir)%(Filename)%(Extension)"/>
 <PackageReference Include="MessagePack" Version="2.5.305"/><PackageReference Include="SixLabors.ImageSharp" Version="2.1.13"/><PackageReference Include="Newtonsoft.Json" Version="13.0.3"/><PackageReference Include="ZstdSharp.Port" Version="0.7.2"/>
 <PackageReference Include="Kyaru.Texture2DDecoder" Version="0.17.0"/><PackageReference Include="Kyaru.Texture2DDecoder.Windows" Version="0.1.0"/><PackageReference Include="Mono.Cecil" Version="0.11.5"/><PackageReference Include="SixLabors.ImageSharp.Drawing" Version="1.0.0-beta15"/><PackageReference Include="Vortice.D3DCompiler" Version="3.4.3-beta"/>
+<EmbeddedResource Include="Schemas/hok-2022.3.5f1.gz.b64" LogicalName="Hok.Schemas.2022.3.5f1"/>
+<EmbeddedResource Include="Schemas/hok-extra-2022.3.5f1.json" LogicalName="Hok.Schemas.Extra.2022.3.5f1"/>
 <None Include="../../vendor/Studio-HoK/Keys.json" Condition="Exists('../../vendor/Studio-HoK/Keys.json')" Link="Keys.json" CopyToOutputDirectory="PreserveNewest"/>
 <None Include="../../vendor/Studio-HoK/Keys.example.json" Condition="!Exists('../../vendor/Studio-HoK/Keys.json')" Link="Keys.json" CopyToOutputDirectory="PreserveNewest"/>
 </ItemGroup><PropertyGroup><LangVersion>12.0</LangVersion></PropertyGroup></Project>

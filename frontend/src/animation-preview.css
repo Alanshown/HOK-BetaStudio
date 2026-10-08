@@ -2,3 +2,4 @@
 .animation-notice p{margin-top:4px}
 .model-stage .stage-tools{display:flex;align-items:center;gap:3px;max-width:calc(100% - 20px);flex-wrap:wrap;justify-content:center;white-space:normal}
 .model-stage .stage-tools input[type=range]{width:140px;padding:0;accent-color:#147d72;border:0}
+.curve-preview{display:flex;flex-direction:column;gap:16px;padding:28px;height:100%;overflow:auto}.curve-preview label{display:flex;align-items:center;gap:14px}.curve-preview select{flex:1;min-width:0}.curve-preview svg{width:100%;min-height:220px;flex:1}.curve-controls{display:flex;align-items:center;gap:16px}.curve-controls input{flex:1;accent-color:#147d72}.curve-values{font-size:12px;color:#426761}

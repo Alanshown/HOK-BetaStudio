@@ -11,10 +11,10 @@ OutFile "${OUTPUT_FILE}"
 ; Empty lets .onInit distinguish an explicit /D= override from the default.
 InstallDir ""
 RequestExecutionLevel user
-VIProductVersion "1.3.0.3"
+VIProductVersion "1.3.0.4"
 VIAddVersionKey "ProductName" "HOK BetaStudio"
 VIAddVersionKey "FileDescription" "HOK BetaStudio per-user installer"
-VIAddVersionKey "FileVersion" "1.3.0.3"
+VIAddVersionKey "FileVersion" "1.3.0.4"
 VIAddVersionKey "LegalCopyright" "See included third-party notices"
 !define MUI_ICON "${BUILD_DIR}\assets\icons\app\hok-studio.ico"
 !define MUI_UNICON "${BUILD_DIR}\assets\icons\app\hok-studio.ico"

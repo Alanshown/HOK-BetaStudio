@@ -56,10 +56,13 @@ namespace AssetStudio
         }
     }
 
-    public sealed class Texture2D : Texture
+    public class Texture2D : Texture
     {
         public int m_Width;
         public int m_Height;
+        public int m_CompleteImageSize;
+        public int m_ImageCount;
+        public int m_TextureDimension;
         public TextureFormat m_TextureFormat;
         public bool m_MipMap;
         public int m_MipCount;
@@ -73,7 +76,7 @@ namespace AssetStudio
         {
             m_Width = reader.ReadInt32();
             m_Height = reader.ReadInt32();
-            var m_CompleteImageSize = reader.ReadInt32();
+            m_CompleteImageSize = reader.ReadInt32();
             if (version[0] >= 2020) //2020.1 and up
             {
                 var m_MipsStripped = reader.ReadInt32();
@@ -128,8 +131,8 @@ namespace AssetStudio
             {
                 var m_StreamingMipmapsPriority = reader.ReadInt32();
             }
-            var m_ImageCount = reader.ReadInt32();
-            var m_TextureDimension = reader.ReadInt32();
+            m_ImageCount = reader.ReadInt32();
+            m_TextureDimension = reader.ReadInt32();
             m_TextureSettings = new GLTextureSettings(reader);
             if (version[0] >= 3) //3.0 and up
             {
@@ -162,6 +165,9 @@ namespace AssetStudio
             else
             {
                 resourceReader = new ResourceReader(reader, reader.BaseStream.Position, image_data_size);
+                if (image_data_size < 0 || image_data_size > reader.byteStart + reader.byteSize - reader.Position)
+                    throw new System.IO.InvalidDataException("Inline texture bytes exceed the object range");
+                reader.Position += image_data_size;
             }
             image_data = resourceReader;
         }

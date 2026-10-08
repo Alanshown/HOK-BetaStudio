@@ -4,6 +4,6 @@ export interface Skin{skinId:string;heroId:string;name:string;portrait:string;ar
 export interface Db{id:string;path:string;name:string;root:string;heroId:string;skinId:string;stem:string;shard:string|null;bytes:number;fingerprint:string;signature:string;}
 export interface Asset{id:string;name:string;type:string;pathId:string;source:string;bytes:string;formats:string[];preview:string;parseStatus?:string|null;warning?:string|null;classId?:number|null;consumedBytes?:number|null;remainingBytes?:number|null;}
 export interface Boot{version:string;revision:string;heroes:Hero[];skins:Skin[];artOrigin:string;initialPaths:string[];}
-export interface LoadSummary{count:number;serializedFiles:number;errors:string[];types:Record<string,number>;errorCount?:number;warningCount?:number;errorsTruncated?:boolean;objectTableRows?:number;parseStatuses?:Record<string,number>;}
+export interface LoadSummary{count:number;rawEntries?:number;serializedFiles:number;errors:string[];types:Record<string,number>;errorCount?:number;warningCount?:number;errorsTruncated?:boolean;objectTableRows?:number;parseStatuses?:Record<string,number>;}
 export interface LoadResult{generation:number;result:LoadSummary;}
 export interface Page{total:number;page:number;items:Asset[];}

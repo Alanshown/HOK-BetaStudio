@@ -1,11 +1,19 @@
 using System.Text;
 namespace Hok.Worker;
-internal sealed record ResourceAsset(string Id,string Name,string Source,string Type,string Extension,byte[] Data,string? Parent=null,string? Warning=null,bool RawAvailable=true,long? DeclaredBytes=null)
+internal sealed record ResourceAsset(string Id,string Name,string Source,string Type,string Extension,byte[] Bytes,string? Parent=null,string? Warning=null,bool RawAvailable=true,long? DeclaredBytes=null,AssetStudio.ContainerEntry? Backing=null,ResourceAsset? SliceParent=null,long SliceOffset=0,long? SliceLength=null)
 {
+    public static long MaterializedBytes {get;private set;}
+    public static void ResetMetrics()=>MaterializedBytes=0;
+    public Stream Open()=>SliceParent is not null?new ResourceSliceStream(SliceParent.Open(),SliceOffset,SliceLength??throw new InvalidDataException("Missing resource member length")):Backing?.Open()??new MemoryStream(Bytes,false);
+    public byte[] Data {get{using var input=Open();var result=new byte[checked((int)input.Length)];input.ReadExactly(result);MaterializedBytes+=result.Length;return result;}}
+    public long Length=>SliceLength??Backing?.Length??Bytes.Length;
+    public byte[] Head(int count=256){using var input=Open();var bytes=new byte[(int)Math.Min(count,input.Length)];input.ReadExactly(bytes);return bytes;}
+    public void CopyTo(Stream output){using var input=Open();input.CopyTo(output);}
     public bool IsAudio=>Type is "WwiseAudio" or "AudioFile";
     public bool IsBank=>Type=="WwiseBank";
+    public bool IsStructured=>Type is "HokObjectTree" or "HokActionTimeline" or "XmlAsset" or "TextFile";
     public string Preview=>IsBank?"bank":IsAudio?"audio":Extension is "png" or "jpg" or "bmp"?"image":"data";
-    public string[] Formats=>!RawAvailable?new[]{"json"}:IsBank
+    public string[] Formats=>!RawAvailable?new[]{"json"}:IsStructured?(Type=="HokObjectTree"?new[]{"json","xml","original","raw"}:new[]{"original","json","raw"}):IsBank
         ? new[]{"original","zip-wem"}.Concat(AudioTools.DecoderReady&&AudioTools.Mp3Ready?new[]{"zip-mp3"}:[]).Concat(new[]{"raw","json"}).ToArray()
         : IsAudio
         ? new[]{"original",Extension}.Concat(AudioTools.DecoderReady||Type=="AudioFile"?new[]{"wav"}:[]).Concat(AudioTools.Mp3Ready&&(AudioTools.DecoderReady||Type=="AudioFile")?new[]{"mp3"}:[]).Append("raw").Distinct().ToArray()
@@ -15,7 +23,17 @@ internal sealed record ResourceAsset(string Id,string Name,string Source,string 
     {
         if(!Formats.Contains(format))throw new NotSupportedException(format);
         if(IsBank&&format.StartsWith("zip-",StringComparison.Ordinal)){BankArchive.Write(this,format,output);return;}
-        if(format is "original" or "raw"||format==Extension){File.WriteAllBytes(output,Data);return;}
+        if(format is "original" or "raw"||format==Extension){
+            if((Backing is not null||SliceParent is not null)&&(!IsAudio&&!IsBank||format=="raw")){using var outputFile=File.Create(output);CopyTo(outputFile);return;}
+            var bytes=Data;
+            if(format!="raw"){
+                if(IsBank)AudioValidation.ValidateBank(bytes);
+                if(Extension=="wem")AudioValidation.ValidateWave(bytes,false);
+                if(Extension=="wav")AudioValidation.ValidateWave(bytes,true);
+            }
+            if(IsAudio||IsBank)AudioTools.WriteOriginal(bytes,output);else File.WriteAllBytes(output,bytes);return;
+        }
+        if(IsStructured&&format is "json" or "xml"){HokStructured.Write(this,format,output);return;}
         if(format=="json"){File.WriteAllText(output,System.Text.Json.JsonSerializer.Serialize(Describe(),Program.Json));return;}
         if(format=="wav"){AudioTools.Decode(Data,Extension,output);return;}
         if(format=="mp3"){
@@ -25,8 +43,8 @@ internal sealed record ResourceAsset(string Id,string Name,string Source,string 
         }
         throw new NotSupportedException(format);
     }
-    public object Describe()=>new{Id,Name,Source,Type,Extension,bytes=DeclaredBytes??Data.Length,retainedBytes=Data.Length,RawAvailable,Parent,Warning,head=Convert.ToHexString(Data.AsSpan(0,Math.Min(256,Data.Length)))};
-    public static (string type,string extension) Detect(byte[] bytes,string fallback)
+    public object Describe()=>new{Id,Name,Source,Type,Extension,bytes=DeclaredBytes??Length,retainedBytes=Bytes.Length,RawAvailable,Parent,Warning,head=Convert.ToHexString(Head())};
+    public static (string type,string extension) Detect(byte[] bytes,string fallback,long? length=null)
     {
         var s=bytes.AsSpan();
         if(fallback=="QtsRawMetadata")return("QtsRawMetadata","bin");
@@ -43,9 +61,10 @@ internal sealed record ResourceAsset(string Id,string Name,string Source,string 
         if(s.StartsWith("FSB4"u8)||s.StartsWith("FSB5"u8))return("AudioFile","fsb");
         if(s.StartsWith(new byte[]{137,80,78,71,13,10,26,10}))return("ImageFile","png");
         if(s.StartsWith(new byte[]{255,216,255}))return("ImageFile","jpg");
-        if(s.Length>=26&&s.StartsWith("BM"u8)&&System.Buffers.Binary.BinaryPrimitives.ReadUInt32LittleEndian(s.Slice(2))==s.Length)return("ImageFile","bmp");
+        if(s.Length>=26&&s.StartsWith("BM"u8)&&System.Buffers.Binary.BinaryPrimitives.ReadUInt32LittleEndian(s.Slice(2))==(length??s.Length))return("ImageFile","bmp");
         if(s.StartsWith("QTSF_PACKAGE"u8))return("PackageMetadata","bytes");
         if(fallback=="AssetsFile")return("SerializedFile","assets");
+        if(HokStructured.Detect(bytes,length??bytes.Length) is{} structured)return structured;
         return("ResourceFile","bin");
     }
     static ushort WaveTag(ReadOnlySpan<byte> data){

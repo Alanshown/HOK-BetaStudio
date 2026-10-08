@@ -18,6 +18,7 @@ internal static class BankArchive
             using(var archive=new ZipArchive(stream,ZipArchiveMode.Create)){
                 var names=new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 foreach(var item in audio){
+                    AudioTools.CheckCancellation();
                     string name=Path.GetFileNameWithoutExtension(item.Name),entryName=name+"."+extension;
                     if(name.Length==0||name.Any(c=>!char.IsAsciiDigit(c)))throw new InvalidDataException("Invalid SoundBank media ID.");
                     int duplicate=1;while(!names.Add(entryName))entryName=name+"_"+(++duplicate)+"."+extension;
@@ -28,7 +29,7 @@ internal static class BankArchive
                             item.Write("mp3",converted);
                         }
                         using var dest=archive.CreateEntry(entryName,CompressionLevel.Optimal).Open();
-                        if(converted is null)dest.Write(item.Data);
+                        if(converted is null){var bytes=item.Data;AudioValidation.ValidateWave(bytes,false);dest.Write(bytes);}
                         else{using var source=File.OpenRead(converted);source.CopyTo(dest);}
                     }catch(Exception e){throw new IOException($"{item.Name}: {e.GetBaseException().Message}; ZIP export was not completed.",e);}
                     finally{if(converted is not null&&File.Exists(converted))File.Delete(converted);}
