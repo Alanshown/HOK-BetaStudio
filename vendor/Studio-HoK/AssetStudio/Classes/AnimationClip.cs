@@ -1263,7 +1263,8 @@ namespace AssetStudio
                         }
                         if (sum > 1.01 || !double.IsFinite(sum))
                             throw new InvalidDataException("Invalid HOK packed quaternion components.");
-                        result[output + omitted] = (float)Math.Sqrt(Math.Max(0, 1 - sum)) * ((flags & 4) != 0 ? -1 : 1);
+                        // HOK selector bit 2 SET means POSITIVE, verified against serialized endpoints.
+                        result[output + omitted] = (float)Math.Sqrt(Math.Max(0, 1 - sum)) * ((flags & 4) != 0 ? 1 : -1);
                         output += 4;
                     }
                     else
