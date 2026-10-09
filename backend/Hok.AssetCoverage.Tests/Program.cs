@@ -22,10 +22,15 @@ var vector=DenseClip.DecodeHokSamples(1,3,Pack([(9,1),(9,257),(9,511)]),[Range(0
 Check(vector.SequenceEqual(new[]{.25f,64.25f,127.75f}),"vector components span UInt16 word boundaries");
 for(uint omitted=0;omitted<4;omitted++)foreach(uint sign in new uint[]{0,4}){
  var quat=DenseClip.DecodeHokSamples(1,4,Pack([(12,0),(12,0),(12,0),(3,omitted|sign)]),[Range(0xc01,0,1f/4095)]);
- Check(quat.Select((v,i)=>v==(i==omitted?(sign==0?1:-1):0)).All(v=>v),"quaternion trailing selector/sign "+omitted+"/"+sign);
+ Check(quat.Select((v,i)=>v==(i==omitted?(sign==0?-1:1):0)).All(v=>v),"HOK quaternion trailing selector: set sign bit is positive "+omitted+"/"+sign);
+ // Nonzero stored components distinguish a wrong omitted sign from the
+ // harmless whole-quaternion q/-q double cover. Exercise all eight selectors.
+ var mixed=DenseClip.DecodeHokSamples(1,4,Pack([(8,51),(8,102),(8,51),(3,omitted|sign)]),[Range(0x801,0,1f/255)]);
+ var expected=new List<float>{.2f,.4f,.2f};expected.Insert((int)omitted,(sign==0?-1:1)*(float)Math.Sqrt(.76));
+ Check(mixed.Zip(expected,(a,b)=>Math.Abs(a-b)<1e-6).All(v=>v)&&Math.Abs(mixed.Zip(expected,(a,b)=>a*b).Sum()-1)<1e-6,"nonzero quaternion orientation and component order "+omitted+"/"+sign);
 }
 var nonzero=DenseClip.DecodeHokSamples(1,4,Pack([(8,51),(8,102),(8,51),(3,7)]),[Range(0x801,0,1f/255)]);
-Check(Math.Abs(nonzero[0]-.2f)<1e-6&&Math.Abs(nonzero[1]-.4f)<1e-6&&Math.Abs(nonzero[2]-.2f)<1e-6&&nonzero[3]<0&&Math.Abs(nonzero.Sum(x=>x*x)-1)<1e-6,"nonzero quaternion reconstructs omitted component with correct sign");
+Check(Math.Abs(nonzero[0]-.2f)<1e-6&&Math.Abs(nonzero[1]-.4f)<1e-6&&Math.Abs(nonzero[2]-.2f)<1e-6&&nonzero[3]>0&&Math.Abs(nonzero.Sum(x=>x*x)-1)<1e-6,"nonzero quaternion reconstructs omitted component with correct sign");
 var legacy=DenseClip.DecodeHokSamples(1,4,[1,2,3,4],[Range(1,-1,.5f)]);
 Check(legacy.SequenceEqual(new[]{-.5f,0,.5f,1}),"legacy full UInt16 encoding remains unchanged");
 var padded=DenseClip.DecodeHokSamples(2,3,[1,2,3,0,4,5,6,0],[Range(0x1002)]);
