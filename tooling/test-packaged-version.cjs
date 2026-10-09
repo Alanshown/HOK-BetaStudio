@@ -10,10 +10,13 @@ const expected=require('../frontend/package.json').version.split('.').slice(0,2)
  const call=(method,params={})=>new Promise((resolve,reject)=>{const id=++serial,timer=setTimeout(()=>reject(Error('CDP timeout: '+method)),10000);pending.set(id,{resolve,reject,timer});socket.send(JSON.stringify({id,method,params}));});
  const evaluate=async expression=>{const r=await call('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});assert(!r.exceptionDetails,JSON.stringify(r.exceptionDetails));return r.result.value;};
  try{
+  await call('Emulation.setDeviceMetricsOverride',{width:1600,height:1000,deviceScaleFactor:1,mobile:false});
   let actual;for(let i=0;i<40;i++){actual=await evaluate(`document.querySelector('.version')?.textContent`);if(actual)break;await new Promise(r=>setTimeout(r,250));}assert.equal(actual,expected);
+  assert(await evaluate(`(()=>{const e=document.querySelector('.version'),r=e.getBoundingClientRect();return getComputedStyle(e).visibility==='visible'&&r.width>0&&r.height>0;})()`),'Version label must be visibly rendered, not just present in the DOM');
   assert.equal(await evaluate(`document.querySelector('.wordmark')?.textContent`),'HOK BetaStudio');
   for(const language of ['en','vi','zh']){await evaluate(`(()=>{const s=document.querySelector('.title-right select');s.value=${JSON.stringify(language)};s.dispatchEvent(new Event('change',{bubbles:true}));})()`);await new Promise(r=>setTimeout(r,100));assert.equal(await evaluate(`document.querySelector('.version')?.textContent`),expected);}
-  const screenshot=await call('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(output,'version-1.4.png'),Buffer.from(screenshot.data,'base64'));
+  await new Promise(r=>setTimeout(r,2500));
+  const screenshot=await call('Page.captureScreenshot',{format:'png',captureBeyondViewport:true});fs.writeFileSync(path.join(output,'version-1.4.png'),Buffer.from(screenshot.data,'base64'));
   const result={passed:true,expected,actual,languages:['en','vi','zh'],target:target.url,scope:'Packaged native WebView2 header/version, isolated smoke profile'};fs.writeFileSync(path.join(output,'report.json'),JSON.stringify(result,null,2));console.log(JSON.stringify(result));
  }finally{socket.close();}
 })().catch(e=>{console.error(e);process.exitCode=1});
