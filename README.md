@@ -3,7 +3,7 @@
   <h1>HOK BetaStudio</h1>
   <p>A desktop workspace for Honor of Kings assets.</p>
   <p>
-    <img alt="Version 1.3" src="https://img.shields.io/badge/version-1.3-147d72?style=flat-square">
+    <img alt="Version 1.4" src="https://img.shields.io/badge/version-1.4-147d72?style=flat-square">
     <img alt="Windows x64" src="https://img.shields.io/badge/platform-Windows_x64-357b9b?style=flat-square">
     <img alt="C# and React" src="https://img.shields.io/badge/C%23_%2B_React-desktop-667672?style=flat-square">
     <img alt="Three interface languages" src="https://img.shields.io/badge/UI-EN_%C2%B7_%E4%B8%AD%E6%96%87_%C2%B7_VI-147d72?style=flat-square">
@@ -17,15 +17,15 @@
 
 <!-- README-I18N:END -->
 
-Version **1.3** adds [silent resource synchronization](docs/RESOURCE-SYNC-1.3.md) and is available on the [1.3 Release page](https://github.com/Alanshown/HOK-BetaStudio/releases/tag/1.3). See the [release notes](docs/releases/1.3/RELEASE-NOTES.md).
+Version **1.4** adds on-demand previews, memory-aware DB workers and reference-aware Mesh/animation FBX export. See the [release notes](docs/releases/1.4/RELEASE-NOTES.md). Binary links below become available when the 1.4 Release attachments are published; source updates do not publish binaries automatically.
 
-**[Download installer 1.3](https://github.com/Alanshown/HOK-BetaStudio/releases/download/1.3/HOK-BetaStudio-1.3-win-x64-setup.exe) · [Download portable ZIP 1.3](https://github.com/Alanshown/HOK-BetaStudio/releases/download/1.3/HOK-BetaStudio-1.3-win-x64-portable.zip)**
+**[Download installer 1.4](https://github.com/Alanshown/HOK-BetaStudio/releases/download/1.4/HOK-BetaStudio-1.4-win-x64-setup.exe) · [Download portable ZIP 1.4](https://github.com/Alanshown/HOK-BetaStudio/releases/download/1.4/HOK-BetaStudio-1.4-win-x64-portable.zip)**
 
-Windows x64 · Source version 1.3 · [Installation & checksums](docs/INSTALL.md) · [MIT license](LICENSE)
+Windows x64 · Source version 1.4 · [Installation & checksums](docs/INSTALL.md) · [MIT license](LICENSE)
 
 Browse DB packages by hero and skin, inspect Unity and non-Unity entries, preview models and audio, and export selected assets in batches. A C# backend keeps parsing, previews and exports outside the interface process.
 
-**[Screenshots](#export) · [Releases](https://github.com/Alanshown/HOK-BetaStudio/releases/tag/1.3) · [Issues](https://github.com/Alanshown/HOK-BetaStudio/issues)**
+**[Screenshots](#export) · [Releases](https://github.com/Alanshown/HOK-BetaStudio/releases) · [Issues](https://github.com/Alanshown/HOK-BetaStudio/issues)**
 
 ![Hero catalog in the desktop application](docs/images/01-catalog.png)
 
@@ -60,19 +60,19 @@ Browse DB packages by hero and skin, inspect Unity and non-Unity entries, previe
 | Module | Preview / output |
 |---|---|
 | Textures and sprites | Image preview, channel toggles and zoom; PNG, TGA, BMP, JPG, raw data |
-| Meshes | Interactive 3D orbit/zoom, auto-rotation and wireframe; OBJ, JSON, raw data |
+| Meshes | Interactive 3D orbit/zoom and wireframe; OBJ, FBX, JSON, raw data. FBX includes available referenced bones, morphs and animations; an unlinked mesh remains static |
 | GameObject / Animator | FBX export when native helpers and references are available |
-| AnimationClip | Unity YAML `.anim`, JSON, raw data; not universal standalone FBX animation conversion |
+| AnimationClip | Reference-linked scene playback; FBX with a resolved model/rig, Unity YAML `.anim`, curve JSON and raw data. Missing dependencies are reported |
 | AudioClip / Wwise audio | Local playback; original media, WAV and MP3 where decoding is supported |
 | WwiseBank | Embedded-media tree and player; original BNK, ZIP of original WEM files, ZIP of converted MP3 files |
-| Text, shader, font and video | Type-appropriate original content or text output, JSON and raw data as supported |
+| Cubemap, font, text, shader and video | Six-face Cubemap preview/PNG ZIP; on-demand font preview; type-appropriate original, text and JSON export |
 | Other package entries | Non-Unity entries are listed too; unknown or undecoded content can be retained as raw data |
 
 Preview dialogs blur the workspace and include previous/next navigation within the same asset category. BNK navigation stays inside the selected bank. User interaction interrupts model auto-rotation.
 
 `WwiseAudio` and `WwiseBank` identify media/container types, **not guaranteed “chat” versus “skill” categories**. A bank can contain embedded media, references to external media, or both. Only media actually present can be extracted. WEM export preserves original WEM bytes; arbitrary audio-to-WEM encoding is not implemented.
 
-Batch export uses per-item results and collision-safe output locations. Parsing, preview and export use separate managed worker processes. Codec errors and unsupported entries are surfaced rather than reported as successful conversions.
+Previews load only after selection. Closing releases image buffers, model GPU resources, audio sources and temporary fonts; opening a bank does not decode every sound. Small workspaces use separate workers; large workspaces reuse the indexed worker to avoid duplicate DB memory. Batch export records per-item results, warnings and collision-safe paths. Unsupported codecs and unresolved references are reported, not fabricated.
 
 ![Filtered asset workspace](docs/images/03-assets.png)
 ![Model preview](docs/images/05-model.png)
@@ -117,7 +117,7 @@ HOK-BetaStudio/
 └── README.vi.md
 ```
 
-Dependency caches, native runtime packages, game DBs, exported assets and build products are excluded from source control. Version 1.3 uses a bundled URL index and remote portraits; static game portrait libraries are no longer required or packaged. Unknown IDs and failed image requests use local placeholders.
+Dependency caches, native runtime packages, game DBs, exported assets and build products are excluded from source control. Since 1.3, the app uses a bundled URL index and remote portraits; static game portrait libraries are no longer required or packaged. Unknown IDs and failed image requests use local placeholders.
 
 <a id="build"></a>
 ## Build and package
@@ -138,8 +138,8 @@ dotnet run --project backend/Hok.Catalog.Tests -c Release -- .
 Source compilation and a complete desktop distribution are separate steps. See [build inputs](docs/BUILD.md) for native FBX/FMOD/codec helpers, media tools, artwork and the current packaging layout. Do not copy third-party binaries into the Git repository.
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File tooling/build-desktop.ps1 -OutputDirectory build/HOK-BetaStudio-1.3-win-x64
-powershell -ExecutionPolicy Bypass -File tooling/package-desktop.ps1 -BuildDirectory build/HOK-BetaStudio-1.3-win-x64
+powershell -ExecutionPolicy Bypass -File tooling/build-desktop.ps1 -OutputDirectory build/HOK-BetaStudio-1.4-win-x64
+powershell -ExecutionPolicy Bypass -File tooling/package-desktop.ps1 -BuildDirectory build/HOK-BetaStudio-1.4-win-x64
 ```
 
 The separately maintained demonstration page is intentionally excluded from this repository. The images above are real desktop screenshots.
@@ -149,7 +149,7 @@ For maintainers: [PowerShell guide to commits, branches, pushing and merging PRs
 <a id="download"></a>
 ## Download and use
 
-Choose the Setup installer or portable ZIP from the [Release page](https://github.com/Alanshown/HOK-BetaStudio/releases/tag/1.3), using the version actually listed there. A source-code update does not automatically publish binary attachments. GitHub’s automatic **Source code** downloads are not runnable applications. See [installation, SHA-256 verification and troubleshooting](docs/INSTALL.md).
+Choose the Setup installer or portable ZIP from the [Release page](https://github.com/Alanshown/HOK-BetaStudio/releases), using the version actually listed there. A source-code update does not automatically publish binary attachments. GitHub’s automatic **Source code** downloads are not runnable applications. See [installation, SHA-256 verification and troubleshooting](docs/INSTALL.md).
 
 Extract the **whole portable ZIP** and run `HOK BetaStudio.exe`, or use the Windows installer. Do not move the EXE away from its `worker`, `ui` and `assets` folders. [Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/#download) is required even with the self-contained .NET package; Setup does not install it automatically. Packages are not currently code-signed.
 
@@ -162,6 +162,9 @@ The screenshots are captured from the packaged desktop application using local `
 
 | Check | Observed result |
 |---|---|
+| Mesh export (1.4) | 8 real meshes exported to OBJ and FBX and independently re-imported; matching geometry; both desktop samples passed consecutive exports |
+| Animated FBX (1.4) | 6 synthetic FBX fixtures re-imported; rig, root curves, override clips and sampled animation playback verified |
+| On-demand import / previews | 20 DBs tested sequentially; 704,337 visible rows, unchanged source hashes and zero explicit preview-media bytes materialized at import; [scope and limits](docs/LAZY-PREVIEW-VALIDATION.md) |
 | Resource index / desktop synchronization (1.3) | 41 index checks and 22 desktop checks; actual CDN images, silent detection, cache cleanup, three languages and domino refresh |
 | Identity and recursive scanner | 27 checks; 14 DB/shard files found through 12 nested levels |
 | Zero-change rebuild baseline | 16 checks across both packages; byte-identical baseline output |

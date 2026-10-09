@@ -1,4 +1,4 @@
-param([string]$BuildDirectory='build/HOK-BetaStudio-1.3-win-x64',[string]$OutputDirectory='deliverables',[string]$NsisCompiler='',[switch]$InstallerOnly)
+param([string]$BuildDirectory='build/HOK-BetaStudio-1.4-win-x64',[string]$OutputDirectory='deliverables',[string]$NsisCompiler='',[switch]$InstallerOnly)
 $ErrorActionPreference='Stop'
 $root=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $source=[IO.Path]::GetFullPath((Join-Path $root $BuildDirectory))
@@ -8,8 +8,8 @@ if($source -eq $root -or $output.StartsWith($source+[IO.Path]::DirectorySeparato
 if(-not $NsisCompiler){$command=Get-Command makensis.exe -ErrorAction SilentlyContinue;if($command){$NsisCompiler=$command.Source}else{$NsisCompiler='C:\Program Files (x86)\NSIS\makensis.exe'}}
 if(-not(Test-Path -LiteralPath $NsisCompiler)){throw 'NSIS is required to create the installer.'}
 New-Item -ItemType Directory -Path $output -Force | Out-Null
-$zip=Join-Path $output 'HOK-BetaStudio-1.3-win-x64-portable.zip'
-$setup=Join-Path $output 'HOK-BetaStudio-1.3-win-x64-setup.exe'
+$zip=Join-Path $output 'HOK-BetaStudio-1.4-win-x64-portable.zip'
+$setup=Join-Path $output 'HOK-BetaStudio-1.4-win-x64-setup.exe'
 if(((-not $InstallerOnly) -and (Test-Path -LiteralPath $zip)) -or (Test-Path -LiteralPath $setup)){throw 'Package output already exists; choose another OutputDirectory to preserve it.'}
 $files=Get-ChildItem -LiteralPath $source -Recurse -File
 if($files | Where-Object {$_.Extension -in @('.db','.log')}){throw 'Unexpected DB or log in build input; audit before packaging.'}

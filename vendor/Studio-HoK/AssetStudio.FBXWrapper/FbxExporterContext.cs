@@ -47,11 +47,10 @@ namespace AssetStudio.FbxInterop
         {
             IsDisposed = true;
 
-            _frameToNode.Clear();
-            _createdMaterials.Clear();
-            _createdTextures.Clear();
-
-            AsFbxDisposeContext(ref _pContext);
+            _frameToNode?.Clear();
+            _createdMaterials?.Clear();
+            _createdTextures?.Clear();
+            if (_pContext != IntPtr.Zero) AsFbxDisposeContext(ref _pContext);
         }
 
         private void EnsureNotDisposed()

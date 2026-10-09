@@ -18,6 +18,7 @@ namespace AssetStudio
         private Options options;
         private Avatar avatar;
         private HashSet<AnimationClip> animationClipHashSet = new HashSet<AnimationClip>();
+        private HashSet<AnimationClip> requestedAnimations;
         private Dictionary<AnimationClip, string> boundAnimationPathDic = new Dictionary<AnimationClip, string>();
         private Dictionary<uint, string> bonePathHash = new Dictionary<uint, string>();
         private Dictionary<Texture2D, string> textureNameDictionary = new Dictionary<Texture2D, string>();
@@ -27,6 +28,7 @@ namespace AssetStudio
         public ModelConverter(GameObject m_GameObject, Options options, AnimationClip[] animationList = null)
         {
             this.options = options;
+            requestedAnimations = animationList == null ? null : new HashSet<AnimationClip>(animationList);
 
             if (m_GameObject.m_Animator != null)
             {
@@ -53,6 +55,7 @@ namespace AssetStudio
         public ModelConverter(string rootName, List<GameObject> m_GameObjects, Options options, AnimationClip[] animationList = null)
         {
             this.options = options;
+            requestedAnimations = animationList == null ? null : new HashSet<AnimationClip>(animationList);
 
             RootFrame = CreateFrame(rootName, Vector3.Zero, new Quaternion(0, 0, 0, 0), Vector3.One);
             foreach (var m_GameObject in m_GameObjects)
@@ -84,6 +87,7 @@ namespace AssetStudio
         public ModelConverter(Animator m_Animator, Options options, AnimationClip[] animationList = null)
         {
             this.options = options;
+            requestedAnimations = animationList == null ? null : new HashSet<AnimationClip>(animationList);
 
             InitWithAnimator(m_Animator);
             if (animationList == null && this.options.collectAnimations)
@@ -101,6 +105,15 @@ namespace AssetStudio
             }
             }
             ConvertAnimations();
+        }
+
+        // Geometry-only fallback: a Mesh does not by itself identify a rig.
+        public ModelConverter(Mesh mesh, Options options)
+        {
+            this.options = options;
+            RootFrame = CreateFrame(string.IsNullOrWhiteSpace(mesh.Name) ? "Mesh" : mesh.Name,
+                Vector3.Zero, new Quaternion(0, 0, 0, 1), Vector3.One);
+            ConvertMesh(mesh, null);
         }
 
         private void InitWithAnimator(Animator m_Animator)
@@ -165,11 +178,13 @@ namespace AssetStudio
                 ConvertMeshRenderer(m_GameObject.m_SkinnedMeshRenderer);
             }
 
-            if (m_GameObject.m_Animation != null)
+            if (m_GameObject.m_Animator != null && options.collectAnimations && requestedAnimations == null)
+                CollectAnimationClip(m_GameObject.m_Animator);
+            if (m_GameObject.m_Animation != null && (options.collectAnimations || requestedAnimations != null))
             {
-                foreach (var animation in m_GameObject.m_Animation.m_Animations)
+                foreach (var animation in m_GameObject.m_Animation.m_Animations.Prepend(m_GameObject.m_Animation.m_Animation))
                 {
-                    if (animation.TryGet(out var animationClip))
+                    if (animation.TryGet(out var animationClip) && (requestedAnimations?.Contains(animationClip) ?? options.collectAnimations))
                     {
                         if (!boundAnimationPathDic.ContainsKey(animationClip))
                         {
@@ -191,36 +206,26 @@ namespace AssetStudio
         {
             if (m_Animator.m_Controller.TryGet(out var m_Controller))
             {
-                switch (m_Controller)
-                {
-                    case AnimatorOverrideController m_AnimatorOverrideController:
-                        {
-                            if (m_AnimatorOverrideController.m_Controller.TryGet<AnimatorController>(out var m_AnimatorController))
-                            {
-                                foreach (var pptr in m_AnimatorController.m_AnimationClips)
-                                {
-                                    if (pptr.TryGet(out var m_AnimationClip))
-                                    {
-                                        animationClipHashSet.Add(m_AnimationClip);
-                                    }
-                                }
-                            }
-                            break;
-                        }
-
-                    case AnimatorController m_AnimatorController:
-                        {
-                            foreach (var pptr in m_AnimatorController.m_AnimationClips)
-                            {
-                                if (pptr.TryGet(out var m_AnimationClip))
-                                {
-                                    animationClipHashSet.Add(m_AnimationClip);
-                                }
-                            }
-                            break;
-                        }
-                }
+                animationClipHashSet.UnionWith(ControllerClips(m_Controller, new HashSet<RuntimeAnimatorController>()));
             }
+        }
+
+        private static HashSet<AnimationClip> ControllerClips(RuntimeAnimatorController controller, HashSet<RuntimeAnimatorController> visiting)
+        {
+            if (!visiting.Add(controller)) throw new System.IO.InvalidDataException("Cyclic animator controller references");
+            var clips = new HashSet<AnimationClip>();
+            if (controller is AnimatorController normal)
+                foreach (var pointer in normal.m_AnimationClips)
+                    if (pointer.TryGet(out var clip)) clips.Add(clip);
+            if (controller is AnimatorOverrideController replacement)
+            {
+                if (replacement.m_Controller.TryGet(out var parent)) clips.UnionWith(ControllerClips(parent, visiting));
+                foreach (var pair in replacement.m_Clips)
+                    if (pair.m_OriginalClip.TryGet(out var original) && clips.Contains(original) && pair.m_OverrideClip.TryGet(out var updated))
+                    { clips.Remove(original); clips.Add(updated); }
+            }
+            visiting.Remove(controller);
+            return clips;
         }
 
         private ImportedFrame ConvertTransform(Transform trans)
@@ -268,17 +273,32 @@ namespace AssetStudio
 
         private void ConvertMeshRenderer(Renderer meshR)
         {
+            if (options.selectedMesh != null)
+            {
+                PPtr<Mesh> reference = null;
+                if (meshR is SkinnedMeshRenderer skinned) reference = skinned.m_Mesh;
+                else if (meshR.m_GameObject.TryGet(out var owner)) reference = owner.m_MeshFilter?.m_Mesh;
+                // Do not materialize every sibling mesh just to reject it.
+                if (reference == null || reference.m_PathID != options.selectedMesh.m_PathID) return;
+            }
             var mesh = GetMesh(meshR);
-            if (mesh == null)
+            if (mesh == null || (options.selectedMesh != null && !ReferenceEquals(mesh, options.selectedMesh)))
                 return;
+            ConvertMesh(mesh, meshR);
+        }
+
+        private void ConvertMesh(Mesh mesh, Renderer meshR)
+        {
+            MeshExportValidation.Validate(mesh);
             var iMesh = new ImportedMesh();
-            meshR.m_GameObject.TryGet(out var m_GameObject2);
-            iMesh.Path = GetTransformPath(m_GameObject2.m_Transform);
+            iMesh.Path = RootFrame.Path;
+            if (meshR != null && meshR.m_GameObject.TryGet(out var m_GameObject2))
+                iMesh.Path = GetTransformPath(m_GameObject2.m_Transform);
             iMesh.SubmeshList = new List<ImportedSubmesh>();
             var subHashSet = new HashSet<int>();
             var combine = false;
             int firstSubMesh = 0;
-            if (meshR.m_StaticBatchInfo?.subMeshCount > 0)
+            if (meshR?.m_StaticBatchInfo?.subMeshCount > 0)
             {
                 firstSubMesh = meshR.m_StaticBatchInfo.firstSubMesh;
                 var finalSubMesh = meshR.m_StaticBatchInfo.firstSubMesh + meshR.m_StaticBatchInfo.subMeshCount;
@@ -288,7 +308,7 @@ namespace AssetStudio
                 }
                 combine = true;
             }
-            else if (meshR.m_SubsetIndices?.Length > 0)
+            else if (meshR?.m_SubsetIndices?.Length > 0)
             {
                 firstSubMesh = (int)meshR.m_SubsetIndices.Min(x => x);
                 foreach (var index in meshR.m_SubsetIndices)
@@ -322,7 +342,7 @@ namespace AssetStudio
                 var submesh = mesh.m_SubMeshes[i];
                 var iSubmesh = new ImportedSubmesh();
                 Material mat = null;
-                if (i - firstSubMesh < meshR.m_Materials.Count)
+                if (options.exportMaterials && meshR != null && i - firstSubMesh < meshR.m_Materials.Count)
                 {
                     if (meshR.m_Materials[i - firstSubMesh].TryGet(out var m_Material))
                     {
@@ -504,7 +524,10 @@ namespace AssetStudio
                     }
                 }
 
-                //Morphs
+            }
+
+            {
+                // Morph targets also belong to standalone/static meshes.
                 if (mesh.m_Shapes?.channels?.Count > 0)
                 {
                     var morph = new ImportedMorph();
@@ -622,13 +645,14 @@ namespace AssetStudio
         {
             if (boundAnimationPathDic.TryGetValue(m_AnimationClip, out var basePath))
             {
-                path = basePath + "/" + path;
+                path = string.IsNullOrEmpty(path) ? basePath : basePath + "/" + path;
             }
             return FixBonePath(path);
         }
 
         private string FixBonePath(string path)
         {
+            if (string.IsNullOrEmpty(path)) return RootFrame.Path;
             var frame = RootFrame.FindFrameByPath(path);
             return frame?.Path;
         }
@@ -1179,6 +1203,7 @@ namespace AssetStudio
             public Game game;
             public bool collectAnimations;
             public bool exportMaterials;
+            public Mesh selectedMesh;
             public HashSet<Material> materials;
             public Dictionary<string, (bool, int)> uvs;
             public Dictionary<string, int> texs; 

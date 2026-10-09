@@ -35,7 +35,9 @@ dotnet run --project backend/Hok.Catalog.Tests -c Release -- .
 dotnet run --project backend/Hok.Catalog.Tests -c Release -- . --live
 ```
 
-See [1.3 resource synchronization](RESOURCE-SYNC-1.3.md) for cache boundaries and the isolated desktop integration test. Build/package scripts now default to **1.3**. Existing published 1.2 downloads and build directories are not overwritten.
+See [1.3 resource synchronization](RESOURCE-SYNC-1.3.md) for cache boundaries and the isolated desktop integration test. Build/package scripts now default to **1.4**. Existing published downloads and build directories are not overwritten.
+
+Version 1.4 adds [on-demand preview validation](LAZY-PREVIEW-VALIDATION.md), [Mesh/FBX export checks](MODEL-EXPORT-VALIDATION-1.4.md), cache-lock regression tests and a simulated 1.3-to-1.4 installation upgrade. Native model tests require the compatible x64 helpers next to the test executable. See the [1.4 release notes](releases/1.4/RELEASE-NOTES.md) for the consolidated changes and limitations.
 
 Do not use an empty public fixture directory to infer game compatibility. The source snapshot can compile without game data, but native previews and fixture integration tests require separately supplied inputs.
 

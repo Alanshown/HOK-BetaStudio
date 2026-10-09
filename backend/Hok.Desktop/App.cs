@@ -109,7 +109,7 @@ internal sealed class MainWindow:Window {
   files=result.Files;return new{generation,files,errors=result.Errors,visited=result.Visited};
  }
  static void VerifySnapshot(DbRecord[] snapshot){foreach(var f in snapshot){var info=new FileInfo(f.Path);if(!info.Exists||$"{info.Length}:{info.LastWriteTimeUtc.Ticks}"!=f.Fingerprint)throw new IOException("Source file changed; reload the workspace.");}}
- object CatalogView(CatalogIndex index)=>new{version="1.3",revision=index.Revision,heroes=index.Records.Where(e=>e.Kind=="hero").Select(e=>new{id=e.Id,name=e.Name,portrait=e.Status=="quarantined"?"":e.ImageUrl}),skins=index.Records.Where(e=>e.Kind=="skin").Select(e=>new{skinId=e.Id,heroId=e.HeroId,name=e.Name,portrait=e.Status=="quarantined"?"":e.ImageUrl,artAvailable=e.Status!="quarantined"}),artOrigin="https://art.hok.local/",initialPaths=args.Where(a=>!a.StartsWith("--")).ToArray()};
+ object CatalogView(CatalogIndex index)=>new{version="1.4",revision=index.Revision,heroes=index.Records.Where(e=>e.Kind=="hero").Select(e=>new{id=e.Id,name=e.Name,portrait=e.Status=="quarantined"?"":e.ImageUrl}),skins=index.Records.Where(e=>e.Kind=="skin").Select(e=>new{skinId=e.Id,heroId=e.HeroId,name=e.Name,portrait=e.Status=="quarantined"?"":e.ImageUrl,artAvailable=e.Status!="quarantined"}),artOrigin="https://art.hok.local/",initialPaths=args.Where(a=>!a.StartsWith("--")).ToArray()};
  async Task<object?> Dispatch(string method,JsonElement p){
   switch(method){
    case "boot":
