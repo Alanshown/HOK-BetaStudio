@@ -3,7 +3,7 @@
   <h1>HOK BetaStudio</h1>
   <p>Không gian làm việc trên máy tính cho tài nguyên Honor of Kings.</p>
   <p>
-    <img alt="Phiên bản 1.3" src="https://img.shields.io/badge/version-1.3-147d72?style=flat-square">
+    <img alt="Phiên bản 1.4" src="https://img.shields.io/badge/version-1.4-147d72?style=flat-square">
     <img alt="Windows x64" src="https://img.shields.io/badge/platform-Windows_x64-357b9b?style=flat-square">
     <img alt="C# và React" src="https://img.shields.io/badge/C%23_%2B_React-desktop-667672?style=flat-square">
     <img alt="Ba ngôn ngữ giao diện" src="https://img.shields.io/badge/UI-EN_%C2%B7_%E4%B8%AD%E6%96%87_%C2%B7_VI-147d72?style=flat-square">
@@ -17,15 +17,15 @@
 
 <!-- README-I18N:END -->
 
-Phiên bản **1.3** bổ sung [đồng bộ tài nguyên ngầm](docs/RESOURCE-SYNC-1.3.md) và đã có trên [trang Release 1.3](https://github.com/Alanshown/HOK-BetaStudio/releases/tag/1.3). Xem [ghi chú phát hành](docs/releases/1.3/RELEASE-NOTES.md).
+Phiên bản **1.4** bổ sung xem trước theo yêu cầu, điều phối worker DB theo bộ nhớ và xuất FBX mesh/hoạt ảnh theo tham chiếu thực. Xem [ghi chú phát hành](docs/releases/1.4/RELEASE-NOTES.md). Các liên kết tải bên dưới chỉ hoạt động sau khi tệp Release 1.4 được đăng; cập nhật mã nguồn không tự phát hành bản nhị phân.
 
-**[Tải bộ cài 1.3](https://github.com/Alanshown/HOK-BetaStudio/releases/download/1.3/HOK-BetaStudio-1.3-win-x64-setup.exe) · [Tải ZIP portable 1.3](https://github.com/Alanshown/HOK-BetaStudio/releases/download/1.3/HOK-BetaStudio-1.3-win-x64-portable.zip)**
+**[Tải bộ cài 1.4](https://github.com/Alanshown/HOK-BetaStudio/releases/download/1.4/HOK-BetaStudio-1.4-win-x64-setup.exe) · [Tải ZIP portable 1.4](https://github.com/Alanshown/HOK-BetaStudio/releases/download/1.4/HOK-BetaStudio-1.4-win-x64-portable.zip)**
 
-Windows x64 · Mã nguồn phiên bản 1.3 · [Cài đặt và kiểm tra](docs/INSTALL.md#tiếng-việt) · [Giấy phép MIT](LICENSE)
+Windows x64 · Mã nguồn phiên bản 1.4 · [Cài đặt và kiểm tra](docs/INSTALL.md#tiếng-việt) · [Giấy phép MIT](LICENSE)
 
 Duyệt gói DB theo tướng và trang phục, kiểm tra dữ liệu Unity lẫn dữ liệu khác, xem mô hình, nghe âm thanh và xuất hàng loạt. Backend C# tách việc phân tích, xem trước và xuất khỏi tiến trình giao diện.
 
-**[Ảnh chụp](#export) · [Bản phát hành](https://github.com/Alanshown/HOK-BetaStudio/releases/tag/1.3) · [Báo lỗi](https://github.com/Alanshown/HOK-BetaStudio/issues)**
+**[Ảnh chụp](#export) · [Bản phát hành](https://github.com/Alanshown/HOK-BetaStudio/releases) · [Báo lỗi](https://github.com/Alanshown/HOK-BetaStudio/issues)**
 
 ![Danh mục tướng trong ứng dụng desktop](docs/images/01-catalog.png)
 
@@ -60,19 +60,19 @@ Duyệt gói DB theo tướng và trang phục, kiểm tra dữ liệu Unity l�
 | Mô-đun | Xem trước / đầu ra |
 |---|---|
 | Texture và sprite | Xem ảnh, bật/tắt kênh và thu phóng; PNG, TGA, BMP, JPG, dữ liệu thô |
-| Mesh | Xoay/thu phóng 3D, tự xoay và khung dây; OBJ, JSON, dữ liệu thô |
+| Mesh | Xoay/thu phóng 3D và khung dây; OBJ, FBX, JSON, dữ liệu thô. FBX gồm xương, biến dạng và hoạt ảnh có tham chiếu hợp lệ; mesh không liên kết giữ dạng tĩnh |
 | GameObject / Animator | Xuất FBX khi có thư viện native và tham chiếu cần thiết |
-| AnimationClip | Unity YAML `.anim`, JSON, dữ liệu thô; không chuyển mọi hoạt ảnh độc lập sang FBX |
+| AnimationClip | Phát cảnh theo tham chiếu; FBX khi xác định được mô hình/bộ xương, Unity YAML `.anim`, JSON đường cong và dữ liệu thô. Báo rõ khi thiếu phụ thuộc |
 | AudioClip / âm thanh Wwise | Phát cục bộ; tệp gốc, WAV và MP3 khi bộ giải mã hỗ trợ |
 | WwiseBank | Cây phương tiện nhúng và trình phát; BNK gốc, ZIP chứa WEM gốc, ZIP chứa MP3 đã chuyển đổi |
-| Văn bản, shader, phông chữ, video | Nội dung gốc hoặc văn bản phù hợp; JSON và dữ liệu thô khi được hỗ trợ |
+| Cubemap, phông chữ, văn bản, shader, video | Xem sáu mặt Cubemap/ZIP PNG; xem phông chữ theo yêu cầu; xuất nội dung gốc, văn bản và JSON phù hợp |
 | Mục khác trong gói | Liệt kê cả dữ liệu không phải Unity; có thể giữ dữ liệu chưa nhận dạng hoặc chưa giải mã ở dạng thô |
 
 Hộp xem trước làm mờ nền, có nút trước/sau trong cùng loại tài nguyên. Điều hướng BNK chỉ chuyển trong bank hiện tại. Thao tác của người dùng dừng tự xoay mô hình.
 
 `WwiseAudio` và `WwiseBank` là loại phương tiện/vùng chứa, **không cố định tương ứng với “âm thanh trò chuyện” và “giọng kỹ năng”**. Bank có thể chứa phương tiện nhúng, tham chiếu ngoài hoặc cả hai. Chỉ dữ liệu thực sự có mặt mới trích xuất được. Xuất WEM giữ nguyên byte gốc; chưa hỗ trợ mã hóa âm thanh bất kỳ thành WEM.
 
-Xuất hàng loạt ghi kết quả từng mục và tránh trùng tên đầu ra. Phân tích, xem trước và xuất dùng các tiến trình worker riêng có quản lý. Lỗi codec và mục không hỗ trợ được thông báo, không bị coi là chuyển đổi thành công.
+Chỉ tải xem trước sau khi chọn. Đóng cửa sổ sẽ giải phóng bộ đệm ảnh, tài nguyên GPU, nguồn âm thanh và phông chữ tạm; mở bank không giải mã toàn bộ âm thanh. Không gian nhỏ dùng worker riêng; không gian lớn tái sử dụng worker đã lập chỉ mục để tránh nhân đôi bộ nhớ DB. Xuất hàng loạt ghi kết quả, cảnh báo và tránh trùng đường dẫn. Codec không hỗ trợ và tham chiếu thiếu được báo rõ, không tạo dữ liệu giả.
 
 ![Không gian làm việc với tài nguyên](docs/images/03-assets.png)
 ![Xem mô hình](docs/images/05-model.png)
@@ -117,7 +117,7 @@ HOK-BetaStudio/
 └── README.vi.md
 ```
 
-Không đưa bộ nhớ đệm phụ thuộc, gói runtime native, DB game, tài nguyên xuất và sản phẩm biên dịch vào quản lý nguồn. Bản 1.3 dùng chỉ mục URL đi kèm và ảnh trực tuyến; không còn yêu cầu hoặc đóng gói thư viện ảnh game tĩnh. ID chưa biết và ảnh tải lỗi dùng ảnh thay thế cục bộ.
+Không đưa bộ nhớ đệm phụ thuộc, gói runtime native, DB game, tài nguyên xuất và sản phẩm biên dịch vào quản lý nguồn. Từ bản 1.3, ứng dụng dùng chỉ mục URL đi kèm và ảnh trực tuyến; không còn yêu cầu hoặc đóng gói thư viện ảnh game tĩnh. ID chưa biết và ảnh tải lỗi dùng ảnh thay thế cục bộ.
 
 <a id="build"></a>
 ## Biên dịch và đóng gói
@@ -138,8 +138,8 @@ dotnet run --project backend/Hok.Catalog.Tests -c Release -- .
 Biên dịch mã nguồn và tạo bản phân phối desktop đầy đủ là hai bước riêng. Xem [đầu vào xây dựng](docs/BUILD.md) về thư viện FBX/FMOD/codec native, công cụ âm thanh, hình ảnh và bố cục đóng gói. Không chép tệp nhị phân bên thứ ba vào Git.
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File tooling/build-desktop.ps1 -OutputDirectory build/HOK-BetaStudio-1.3-win-x64
-powershell -ExecutionPolicy Bypass -File tooling/package-desktop.ps1 -BuildDirectory build/HOK-BetaStudio-1.3-win-x64
+powershell -ExecutionPolicy Bypass -File tooling/build-desktop.ps1 -OutputDirectory build/HOK-BetaStudio-1.4-win-x64
+powershell -ExecutionPolicy Bypass -File tooling/package-desktop.ps1 -BuildDirectory build/HOK-BetaStudio-1.4-win-x64
 ```
 
 Trang trình diễn được duy trì riêng và không nằm trong kho này. Các hình ở trên là ảnh chụp ứng dụng desktop thực tế.
@@ -149,7 +149,7 @@ Dành cho người duy trì: [hướng dẫn PowerShell về commit, nhánh, pus
 <a id="download"></a>
 ## Tải xuống và sử dụng
 
-Chọn bộ cài Setup hoặc ZIP portable của phiên bản thực sự đã được đăng trên [trang Release](https://github.com/Alanshown/HOK-BetaStudio/releases/tag/1.3). Cập nhật mã nguồn không tự phát hành tệp nhị phân. Tệp **Source code** do GitHub tạo không phải ứng dụng chạy được. Xem [cài đặt, kiểm tra SHA-256 và khắc phục sự cố](docs/INSTALL.md#tiếng-việt).
+Chọn bộ cài Setup hoặc ZIP portable của phiên bản thực sự đã được đăng trên [trang Release](https://github.com/Alanshown/HOK-BetaStudio/releases). Cập nhật mã nguồn không tự phát hành tệp nhị phân. Tệp **Source code** do GitHub tạo không phải ứng dụng chạy được. Xem [cài đặt, kiểm tra SHA-256 và khắc phục sự cố](docs/INSTALL.md#tiếng-việt).
 
 Giải nén **toàn bộ ZIP portable** rồi chạy `HOK BetaStudio.exe`, hoặc dùng bộ cài Windows. Không tách EXE khỏi các thư mục `worker`, `ui`, `assets`. Gói .NET self-contained vẫn cần [Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/#download); Setup không tự cài runtime này. Hiện các gói chưa được ký mã.
 
@@ -162,6 +162,9 @@ Mở thư mục chứa đầy đủ DB chính, các mảnh và tệp liên quan.
 
 | Kiểm tra | Kết quả quan sát |
 |---|---|
+| Xuất mesh (1.4) | 8 mesh thật xuất OBJ/FBX và đọc lại bằng bộ đọc độc lập, hình học khớp; hai mẫu desktop đều xuất liên tiếp thành công |
+| FBX hoạt ảnh (1.4) | Đọc lại 6 mẫu FBX tổng hợp; kiểm tra bộ xương, đường cong gốc, clip ghi đè và phát hoạt ảnh tại thời điểm mẫu |
+| Nhập / xem theo yêu cầu | Kiểm tra lần lượt 20 DB; 704.337 hàng tài nguyên, hash nguồn không đổi và không nạp dữ liệu media xem trước khi nhập; [phạm vi và giới hạn](docs/LAZY-PREVIEW-VALIDATION.md) |
 | Chỉ mục / đồng bộ desktop (1.3) | 41 kiểm tra chỉ mục và 22 kiểm tra desktop; ảnh CDN thật, phát hiện ngầm, xóa bộ nhớ đệm, ba ngôn ngữ và làm mới domino |
 | Nhận dạng và quét đệ quy | 27 kiểm tra; tìm đủ 14 DB/mảnh qua 12 cấp thư mục |
 | Đóng gói lại không sửa đổi | 16 kiểm tra trên hai gói; đầu ra nền giống từng byte |

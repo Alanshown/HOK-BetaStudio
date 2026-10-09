@@ -59,7 +59,7 @@ namespace AssetStudio.PInvoke
 
             // HMODULE LoadLibraryExA(LPCSTR lpLibFileName, HANDLE hFile, DWORD dwFlags);
             // HMODULE LoadLibraryExW(LPCWSTR lpLibFileName, HANDLE hFile, DWORD dwFlags);
-            [DllImport("kernel32.dll", SetLastError = true)]
+            [DllImport("kernel32.dll", EntryPoint = "LoadLibraryExW", CharSet = CharSet.Unicode, SetLastError = true)]
             private static extern IntPtr LoadLibraryEx(string lpLibFileName, IntPtr hFile, uint dwFlags);
 
             private const uint LOAD_LIBRARY_SEARCH_DEFAULT_DIRS = 0x1000;

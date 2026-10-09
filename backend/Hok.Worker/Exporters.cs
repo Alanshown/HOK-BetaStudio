@@ -10,24 +10,26 @@ internal static class Exporters {
  static bool FbxReady=>File.Exists(Path.Combine(AppContext.BaseDirectory,"x64/AssetStudio.FBXNative.dll"));
  static bool AudioReady=>File.Exists(Path.Combine(AppContext.BaseDirectory,"x64/fmod.dll"));
  public static string[] Formats(Obj obj) => obj switch {
-  DeferredObject d when d.type==ClassIDType.Mesh=>["obj","json","raw"],
-  DeferredObject d when d.type==ClassIDType.AnimationClip=>["anim","curves-json","json","raw"],
+  DeferredObject d when d.type==ClassIDType.Mesh=>MeshFormats(),
+  DeferredObject d when d.type==ClassIDType.AnimationClip=>AnimationFormats(),
   DeferredObject d when d.type==ClassIDType.Shader=>["shader","json","raw"],
   DeferredObject d when d.type is ClassIDType.Font or ClassIDType.VideoClip or ClassIDType.MovieTexture=>["original","json","raw"],
   DeferredObject d when d.type==ClassIDType.AudioClip=>AudioFormats(),
   Cubemap=>["zip-png","png","json","raw"],
   Texture2D or Sprite=>["png","tga","bmp","jpg","raw"],
-  Mesh=>["obj","json","raw"],
+  Mesh=>MeshFormats(),
   Animator or GameObject when FbxReady=>["fbx","json","raw"],
   AudioClip when AudioReady&&AudioTools.Mp3Ready=>["wav","mp3","original","raw"],
   AudioClip when AudioReady=>["wav","original","raw"],
   AudioClip=>["original","raw"],
-  AnimationClip=>["anim","curves-json","json","raw"],
+  AnimationClip=>AnimationFormats(),
   TextAsset=>["original","json","raw"],
   Shader=>["shader","json","raw"],
   Font or VideoClip or MovieTexture=>["original","json","raw"],
   _=>["json","raw"]
  };
+ static string[] MeshFormats()=>FbxReady?["obj","fbx","json","raw"]:["obj","json","raw"];
+ static string[] AnimationFormats()=>FbxReady?["anim","fbx","curves-json","json","raw"]:["anim","curves-json","json","raw"];
  static string[] AudioFormats()=>AudioReady?(AudioTools.Mp3Ready?["wav","mp3","original","raw"]:["wav","original","raw"]):["original","raw"];
  public static string Extension(Obj obj,string format){if(format=="original")obj=DeferredObject.Resolve(obj);return format switch {
   "zip-png"=>"zip",
@@ -54,7 +56,7 @@ internal static class Exporters {
   }
   return JsonConvert.SerializeObject(value,Formatting.Indented,new JsonSerializerSettings{ReferenceLoopHandling=ReferenceLoopHandling.Ignore,MaxDepth=64,Converters={new StringEnumConverter()}});
  }
- public static void Write(Obj obj,string format,string path,ExportOptions options) {
+ public static string[] Write(Obj obj,string format,string path,ExportOptions options) {
   if(!Formats(obj).Contains(format))throw new NotSupportedException(format);
   if(format!="raw")obj=DeferredObject.Resolve(obj);
   Directory.CreateDirectory(Path.GetDirectoryName(path)!);
@@ -75,21 +77,16 @@ internal static class Exporters {
     break;
    case "shader":File.WriteAllText(path,((Shader)obj).Convert());break;
    case "anim":var yaml=((AnimationClip)obj).Convert();if(string.IsNullOrWhiteSpace(yaml))throw new InvalidDataException("Animation conversion unavailable");File.WriteAllText(path,yaml);break;
-   case "fbx":WriteFbx(obj,path,options);break;
+   case "fbx":return ModelFbxExport.Write(obj,path,options);
    case "original":
     var data=obj switch{TextAsset t=>t.m_Script,Font f=>f.m_FontData,AudioClip a=>a.m_AudioData.GetData(),VideoClip v=>v.m_VideoData.GetData(),MovieTexture m=>m.m_MovieData,_=>throw new NotSupportedException()};
     if(data is null||data.Length==0)throw new InvalidDataException("Source stream is empty");File.WriteAllBytes(path,data);break;
    default:throw new NotSupportedException(format);
   }
- }
- static void WriteFbx(Obj obj,string path,ExportOptions settings) {
-  if(!float.IsFinite(settings.Scale)||settings.Scale<=0||settings.Scale>1000)throw new ArgumentOutOfRangeException(nameof(settings.Scale));
-  var options=new ModelConverter.Options {game=obj.assetsFile.game,imageFormat=ImageFormat.Png,collectAnimations=settings.Animations,exportMaterials=settings.Materials,materials=[],uvs=Enumerable.Range(0,8).ToDictionary(i=>"UV"+i,i=>(settings.AllUv||i==0,i)),texs=[]};
-  IImported model=obj switch{Animator a=>new ModelConverter(a,options),GameObject g=>new ModelConverter(g,options),_=>throw new NotSupportedException()};
-  var dir=Directory.GetCurrentDirectory();try{ModelExporter.ExportFbx(path,model,new Fbx.ExportOptions{eulerFilter=true,filterPrecision=.25f,exportAllNodes=true,exportSkins=true,exportAnimations=settings.Animations,exportBlendShape=settings.BlendShapes,boneSize=10,scaleFactor=settings.Scale,fbxVersion=3,fbxFormat=0});}finally{Directory.SetCurrentDirectory(dir);}
-  if(settings.Materials)foreach(var mat in options.materials)File.WriteAllText(Path.Combine(Path.GetDirectoryName(path)!,Identity.SafeName(mat.Name)+"_"+mat.m_PathID+".material.json"),ToJson(mat));
+  return [];
  }
  static void WriteObj(Mesh m,string path) {
+  MeshExportValidation.Validate(m);
   int count=m.m_VertexCount;if(count<=0||m.m_Vertices is null||m.m_Vertices.Length<count*3)throw new InvalidDataException("Mesh vertices unavailable");
   int vstride=m.m_Vertices.Length/count;bool uv=m.m_UV0?.Length>=count*2,normal=m.m_Normals?.Length>=count*3;int us=uv?m.m_UV0.Length/count:0,ns=normal?m.m_Normals.Length/count:0;
   using var sw=new StreamWriter(path,false,new UTF8Encoding(false));sw.WriteLine("# HOK Studio OBJ; source coordinates converted to right-handed");

@@ -135,7 +135,7 @@ public sealed class CatalogService : IDisposable
             try
             {
                 using var request = new HttpRequestMessage(HttpMethod.Get, url);
-                request.Headers.UserAgent.ParseAdd("HOK-BetaStudio/1.3");
+                request.Headers.UserAgent.ParseAdd("HOK-BetaStudio/1.4");
                 if (cached?.Etag is not null) request.Headers.TryAddWithoutValidation("If-None-Match", cached.Etag);
                 if (cached?.Modified is not null) request.Headers.TryAddWithoutValidation("If-Modified-Since", cached.Modified);
                 using var perRequest = CancellationTokenSource.CreateLinkedTokenSource(token);

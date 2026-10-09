@@ -6,15 +6,15 @@ SetCompressorDictSize 32
 !ifndef HOK_SHORTCUT_DIR
 !define HOK_SHORTCUT_DIR "HOK BetaStudio"
 !endif
-Name "HOK BetaStudio 1.3"
+Name "HOK BetaStudio 1.4"
 OutFile "${OUTPUT_FILE}"
 ; Empty lets .onInit distinguish an explicit /D= override from the default.
 InstallDir ""
 RequestExecutionLevel user
-VIProductVersion "1.3.0.4"
+VIProductVersion "1.4.0.0"
 VIAddVersionKey "ProductName" "HOK BetaStudio"
 VIAddVersionKey "FileDescription" "HOK BetaStudio per-user installer"
-VIAddVersionKey "FileVersion" "1.3.0.4"
+VIAddVersionKey "FileVersion" "1.4.0.0"
 VIAddVersionKey "LegalCopyright" "See included third-party notices"
 !define MUI_ICON "${BUILD_DIR}\assets\icons\app\hok-studio.ico"
 !define MUI_UNICON "${BUILD_DIR}\assets\icons\app\hok-studio.ico"
@@ -94,7 +94,7 @@ Section "HOK BetaStudio"
   CreateShortcut "$SMPROGRAMS\${HOK_SHORTCUT_DIR}\HOK BetaStudio.lnk" "$INSTDIR\HOK BetaStudio.exe"
   CreateShortcut "$SMPROGRAMS\${HOK_SHORTCUT_DIR}\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
   WriteRegStr HKCU "${HOK_UNINSTALL_KEY}" "DisplayName" "HOK BetaStudio"
-  WriteRegStr HKCU "${HOK_UNINSTALL_KEY}" "DisplayVersion" "1.3"
+  WriteRegStr HKCU "${HOK_UNINSTALL_KEY}" "DisplayVersion" "1.4"
   WriteRegStr HKCU "${HOK_UNINSTALL_KEY}" "UninstallString" '"$INSTDIR\Uninstall.exe"'
   WriteRegStr HKCU "${HOK_UNINSTALL_KEY}" "InstallLocation" "$INSTDIR"
   WriteRegStr HKCU "${HOK_UNINSTALL_KEY}" "DisplayIcon" "$INSTDIR\HOK BetaStudio.exe"

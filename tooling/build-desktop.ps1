@@ -1,4 +1,4 @@
-param([switch]$FrameworkDependent,[string]$OutputDirectory='build/HOK-BetaStudio-1.3-win-x64',[string]$NativeDirectory='.tools/native/x64')
+param([switch]$FrameworkDependent,[string]$OutputDirectory='build/HOK-BetaStudio-1.4-win-x64',[string]$NativeDirectory='.tools/native/x64')
 $ErrorActionPreference='Stop'
 $root=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $dotnet=Join-Path $root '.tools/dotnet/dotnet.exe'

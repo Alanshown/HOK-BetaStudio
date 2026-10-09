@@ -49,7 +49,7 @@ internal static partial class Program {
   "replacementState"=>replacements?.State()??throw new InvalidOperationException("Load a package first"),
   "replace"=>replacements?.Stage(p.GetProperty("assetId").GetString()!,p.GetProperty("path").GetString()!)??throw new InvalidOperationException("Load a package first"),
   "rebuild"=>replacements?.Build(p.GetProperty("output").GetString()!)??throw new InvalidOperationException("Load a package first"),
-  "ping"=>new{version="1.3",language="C#"},"dump"=>Dump(p.GetProperty("assetId").GetString()!),
+  "ping"=>new{version="1.4",language="C#"},"dump"=>Dump(p.GetProperty("assetId").GetString()!),
   _=>throw new InvalidOperationException("Unknown method")};
  static string Hash(string text)=>Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text.ToUpperInvariant())))[..16];
  static void AddResource(ResourceAsset item){
@@ -181,7 +181,8 @@ internal static partial class Program {
     // filenames, while uniqueness is already guaranteed by the item directory.
     var filename=resource is not null&&(resource.IsBank||resource.IsAudio)?Identity.SafeName(Path.GetFileNameWithoutExtension(resource.Name))+(chosen.StartsWith("zip-",StringComparison.Ordinal)?"-"+chosen[4..]:"")+"."+ext:name+"."+ext;
     var dest=Path.Combine(itemFolder,filename);
-    void Write(string requested,string target){if(resource is not null)resource.Write(requested,target);else Exporters.Write(Objects[id],requested,target,options);}
+    string[] warnings=[];
+    void Write(string requested,string target){if(resource is not null)resource.Write(requested,target);else warnings=Exporters.Write(Objects[id],requested,target,options);}
     string? warning=null;string requestedFormat=chosen;
     try{Write(chosen,dest);}
     catch(Exception conversion) when(format=="auto" && chosen!="raw" && row.Preview is not ("audio" or "bank") && row.Formats.Contains("raw")){
@@ -193,7 +194,7 @@ internal static partial class Program {
      dest=Path.Combine(itemFolder,name+"."+ext);Write(chosen,dest);rawFallback++;
     }
     if(!File.Exists(dest))throw new InvalidDataException("Exporter produced no file");
-    success++;results.Add(new{id,ok=true,path=dest,format=chosen,requestedFormat,rawFallback=warning is not null,warning});
+    success++;results.Add(new{id,ok=true,path=dest,format=chosen,requestedFormat,rawFallback=warning is not null,warning,warnings});
    }catch(Exception ex){results.Add(new{id,ok=false,error=ex.GetBaseException().Message,format});}
   }
   var report=new{created=DateTimeOffset.UtcNow,success,failed=ids.Length-success,rawFallback,results};

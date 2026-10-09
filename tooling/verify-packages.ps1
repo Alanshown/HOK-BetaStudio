@@ -3,8 +3,8 @@ $ErrorActionPreference='Stop'
 $root=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $build=[IO.Path]::GetFullPath((Join-Path $root $BuildDirectory))
 $release=[IO.Path]::GetFullPath((Join-Path $root $ReleaseDirectory))
-$zip=Join-Path $release 'HOK-BetaStudio-1.3-win-x64-portable.zip'
-$setup=Join-Path $release 'HOK-BetaStudio-1.3-win-x64-setup.exe'
+$zip=Join-Path $release 'HOK-BetaStudio-1.4-win-x64-portable.zip'
+$setup=Join-Path $release 'HOK-BetaStudio-1.4-win-x64-setup.exe'
 $seven=$SevenZip
 & $seven t $zip | Out-Null
 if($LASTEXITCODE){throw 'Portable archive integrity failed'}

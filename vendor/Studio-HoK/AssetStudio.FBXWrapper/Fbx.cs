@@ -2,6 +2,8 @@
 using AssetStudio.PInvoke;
 using Newtonsoft.Json.Linq;
 using System.IO;
+using System;
+using System.Linq;
 
 namespace AssetStudio
 {
@@ -27,8 +29,42 @@ namespace AssetStudio
 
         public static class Exporter
         {
+            private static void SeparateJointGeometry(IImported imported)
+            {
+                // Some Unity rigs attach a renderer to a Transform which is also
+                // a joint. Keep the joint identity and put geometry on an identity
+                // child: readers must not have to treat one FBX node as both types.
+                var bones = imported.MeshList?.SelectMany(m => m.BoneList ?? new()).Select(b => b.Path).ToHashSet();
+                if (bones == null) return;
+                foreach (var mesh in imported.MeshList.Where(m => bones.Contains(m.Path)))
+                {
+                    var frame = imported.RootFrame.FindFrameByPath(mesh.Path);
+                    if (frame == null) continue;
+                    var oldPath = mesh.Path;
+                    var name = "Geometry"; int suffix = 0;
+                    while (frame.FindChild(name, false) != null) name = "Geometry_" + ++suffix;
+                    var child = new ImportedFrame { Name=name, LocalPosition=Vector3.Zero,
+                        LocalRotation=new Quaternion(0,0,0,1), LocalScale=Vector3.One };
+                    frame.AddChild(child);mesh.Path=child.Path;
+                    foreach(var morph in imported.MorphList.Where(m=>m.Path==oldPath)) morph.Path=child.Path;
+                    foreach(var animation in imported.AnimationList)
+                    foreach(var track in animation.TrackList.Where(t=>t.Path==oldPath && t.BlendShape!=null).ToArray())
+                    {
+                        // A combined track must retain joint motion on the joint.
+                        // Only the morph curve belongs to the geometry child.
+                        if(track.Translations.Count+track.Rotations.Count+track.Scalings.Count>0)
+                        {
+                            animation.TrackList.Add(new ImportedAnimationKeyframedTrack { Path=child.Path, BlendShape=track.BlendShape });
+                            track.BlendShape=null;
+                        }
+                        else track.Path=child.Path;
+                    }
+                }
+            }
+
             public static void Export(string path, IImported imported, ExportOptions exportOptions)
             {
+                SeparateJointGeometry(imported);
                 var file = new FileInfo(path);
                 var dir = file.Directory;
 
@@ -37,18 +73,37 @@ namespace AssetStudio
                     dir.Create();
                 }
 
+                // FBX SDK can silently fail beyond MAX_PATH, even with a relative
+                // filename. Keep the native work directory short; .NET handles
+                // the user's final Unicode/long destination and sidecar textures.
+                var staging = Path.Combine(Path.GetTempPath(), "hok-fbx-" + Guid.NewGuid().ToString("N"));
+                Directory.CreateDirectory(staging);
                 var currentDir = Directory.GetCurrentDirectory();
-                Directory.SetCurrentDirectory(dir.FullName);
-
-                var name = Path.GetFileName(path);
-
-                using (var exporter = new FbxExporter(name, imported, exportOptions))
+                try
                 {
-                    exporter.Initialize();
-                    exporter.ExportAll();
+                    Directory.SetCurrentDirectory(staging);
+                    using (var exporter = new FbxExporter("model.fbx", imported, exportOptions))
+                    {
+                        exporter.Initialize();
+                        exporter.ExportAll();
+                    }
+                    var generated = Path.Combine(staging, "model.fbx");
+                    if (!File.Exists(generated) || new FileInfo(generated).Length < 64)
+                        throw new IOException("FBX SDK did not generate a valid output file");
+                    foreach (var extra in Directory.GetFiles(staging, "*", SearchOption.AllDirectories))
+                    {
+                        if (extra == generated) continue;
+                        var target = Path.Combine(dir.FullName, Path.GetRelativePath(staging, extra));
+                        Directory.CreateDirectory(Path.GetDirectoryName(target));
+                        File.Copy(extra, target, true);
+                    }
+                    File.Copy(generated, file.FullName, true);
                 }
-
-                Directory.SetCurrentDirectory(currentDir);
+                finally
+                {
+                    Directory.SetCurrentDirectory(currentDir);
+                    Directory.Delete(staging, true); // Only this call's GUID staging directory.
+                }
             }
         }
 

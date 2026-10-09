@@ -46,7 +46,7 @@ internal sealed class WorkerClient : IDisposable {
  public async Task StopAsync(){
   Cancel();await gate.WaitAsync();
   try{
-   if(process is not null){if(!process.HasExited){process.Kill(true);await process.WaitForExitAsync();}process.Dispose();process=null;}
+   if(process is not null){if(!process.HasExited)process.Kill(true);await process.WaitForExitAsync();process.Dispose();process=null;}
    ClearAudioScratch();
   }finally{gate.Release();}
  }

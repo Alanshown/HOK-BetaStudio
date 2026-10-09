@@ -1,4 +1,4 @@
-param([string]$BuildDirectory='build/HOK-BetaStudio-1.3-reference-fix-win-x64',[string]$NsisCompiler='C:\Program Files (x86)\NSIS\makensis.exe')
+param([string]$BuildDirectory='build/HOK-BetaStudio-1.4-win-x64',[string]$NsisCompiler='C:\Program Files (x86)\NSIS\makensis.exe')
 $ErrorActionPreference='Stop'
 $root=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $id=[Guid]::NewGuid().ToString('N')
@@ -41,8 +41,11 @@ try{
  Check ((Registered-Path) -eq $target) 'Fresh install registers selected Unicode path'
  $installedLibrary=Join-Path $target 'worker/Hok.Legacy.dll'
  [IO.File]::WriteAllText($installedLibrary,'old payload',$utf8)
+ # Simulate the registered 1.3 installation without touching production keys.
+ $k=$registry.OpenSubKey($keyName,$true);try{$k.SetValue('DisplayVersion','1.3')}finally{$k.Dispose()}
  Run-Setup
  Check ([IO.File]::ReadAllText($installedLibrary) -eq 'new payload') 'No /D: detects existing location and overwrites old payload'
+ $k=$registry.OpenSubKey($keyName);try{Check ($k.GetValue('DisplayVersion') -eq '1.4') '1.3 registration upgrades to 1.4 in the existing location'}finally{$k.Dispose()}
  Check ([IO.File]::ReadAllText($sentinel) -eq 'keep user data') 'In-place upgrade preserves unrelated user exports'
  Run-Setup
  Check ((Registered-Path) -eq $target) 'Repeated same-version installation succeeds in place'

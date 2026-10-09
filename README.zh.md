@@ -3,7 +3,7 @@
   <h1>HOK BetaStudio</h1>
   <p>面向王者荣耀资产的桌面工作区。</p>
   <p>
-    <img alt="版本 1.3" src="https://img.shields.io/badge/version-1.3-147d72?style=flat-square">
+    <img alt="版本 1.4" src="https://img.shields.io/badge/version-1.4-147d72?style=flat-square">
     <img alt="Windows x64" src="https://img.shields.io/badge/platform-Windows_x64-357b9b?style=flat-square">
     <img alt="C# 与 React" src="https://img.shields.io/badge/C%23_%2B_React-desktop-667672?style=flat-square">
     <img alt="三种界面语言" src="https://img.shields.io/badge/UI-EN_%C2%B7_%E4%B8%AD%E6%96%87_%C2%B7_VI-147d72?style=flat-square">
@@ -17,15 +17,15 @@
 
 <!-- README-I18N:END -->
 
-版本 **1.3** 新增[静默资源同步](docs/RESOURCE-SYNC-1.3.md)，已在 [1.3 发行页](https://github.com/Alanshown/HOK-BetaStudio/releases/tag/1.3)提供下载。查看[发行说明](docs/releases/1.3/RELEASE-NOTES.md)。
+版本 **1.4** 新增按需预览、按内存规模调度 DB 工作进程，以及基于真实引用关系的网格／动画 FBX 导出。查看[发行说明](docs/releases/1.4/RELEASE-NOTES.md)。下方下载链接在 1.4 发行附件发布后生效；源码更新不会自动发布二进制包。
 
-**[下载 1.3 安装版](https://github.com/Alanshown/HOK-BetaStudio/releases/download/1.3/HOK-BetaStudio-1.3-win-x64-setup.exe) · [下载 1.3 便携 ZIP](https://github.com/Alanshown/HOK-BetaStudio/releases/download/1.3/HOK-BetaStudio-1.3-win-x64-portable.zip)**
+**[下载 1.4 安装版](https://github.com/Alanshown/HOK-BetaStudio/releases/download/1.4/HOK-BetaStudio-1.4-win-x64-setup.exe) · [下载 1.4 便携 ZIP](https://github.com/Alanshown/HOK-BetaStudio/releases/download/1.4/HOK-BetaStudio-1.4-win-x64-portable.zip)**
 
-Windows x64 · 源码版本 1.3 · [安装与校验](docs/INSTALL.md#简体中文) · [MIT 许可证](LICENSE)
+Windows x64 · 源码版本 1.4 · [安装与校验](docs/INSTALL.md#简体中文) · [MIT 许可证](LICENSE)
 
 按英雄和皮肤浏览 DB 包，检查 Unity 与非 Unity 文件，预览模型和音频，并批量导出所选资产。C# 后端将解析、预览和导出放在独立于界面的进程中运行。
 
-**[程序截图](#export) · [版本下载](https://github.com/Alanshown/HOK-BetaStudio/releases/tag/1.3) · [问题反馈](https://github.com/Alanshown/HOK-BetaStudio/issues)**
+**[程序截图](#export) · [版本下载](https://github.com/Alanshown/HOK-BetaStudio/releases) · [问题反馈](https://github.com/Alanshown/HOK-BetaStudio/issues)**
 
 ![桌面程序的英雄目录](docs/images/01-catalog.png)
 
@@ -60,19 +60,19 @@ Windows x64 · 源码版本 1.3 · [安装与校验](docs/INSTALL.md#简体中�
 | 模块 | 预览／输出 |
 |---|---|
 | 贴图与精灵图 | 图像预览、通道开关、缩放；PNG、TGA、BMP、JPG、原始数据 |
-| 网格 | 3D 旋转／缩放、自动旋转、线框；OBJ、JSON、原始数据 |
+| 网格 | 3D 旋转／缩放、线框；OBJ、FBX、JSON、原始数据。FBX 包含可解析引用中的骨骼、形变和动画；无关联的网格保持静态 |
 | GameObject / Animator | 原生组件及引用完整时支持 FBX 导出 |
-| AnimationClip | Unity YAML `.anim`、JSON、原始数据；不是通用的独立 FBX 动画转换器 |
+| AnimationClip | 关联场景播放；模型／骨架引用完整时导出 FBX，也支持 Unity YAML `.anim`、曲线 JSON、原始数据；缺少依赖会明确报告 |
 | AudioClip / Wwise 音频 | 本地播放；原始媒体，以及解码器支持时的 WAV、MP3 |
 | WwiseBank | 内嵌媒体树与播放器；原始 BNK、原始 WEM 文件 ZIP、转换后 MP3 文件 ZIP |
-| 文本、着色器、字体、视频 | 按类型导出原始内容或文本；支持时提供 JSON 与原始数据 |
+| Cubemap、字体、文本、着色器、视频 | Cubemap 六面预览／PNG ZIP；按需字体预览；按类型导出原始内容、文本及 JSON |
 | 其他封包条目 | 同时列出非 Unity 文件；未知或未解码内容可保留原始数据 |
 
 预览弹窗模糊工作区背景，可在同类资产中切换上一个／下一个。BNK 内的切换限定在当前音频包中。用户操作会打断模型自动旋转。
 
 `WwiseAudio` 与 `WwiseBank` 表示媒体／容器类型，**不能固定理解为“聊天声音”和“技能语音”**。BNK 可以包含内嵌媒体、外部媒体引用或两者，只能提取实际存在的数据。WEM 导出保留原始字节，不支持将任意音频编码成 WEM。
 
-批量导出逐项记录结果并避免输出名称冲突。解析、预览、导出使用独立受控工作进程；不支持的格式与解码错误会明确报告，不冒充转换成功。
+预览仅在点击后加载；关闭后释放图像缓冲、模型 GPU 资源、音频源与临时字体，打开音频包不会解码全部声音。小工作区分离工作进程，大工作区复用已建立索引的进程，避免重复占用 DB 内存。批量导出逐项记录结果、警告并避免路径冲突；不支持的编解码器和缺失引用会明确报告，不伪造数据。
 
 ![资产工作区](docs/images/03-assets.png)
 ![模型预览](docs/images/05-model.png)
@@ -117,7 +117,7 @@ HOK-BetaStudio/
 └── README.vi.md
 ```
 
-依赖缓存、原生运行库包、游戏 DB、导出资产和构建产物不纳入源码仓库。1.3 使用内置链接索引与在线头像，不再要求或打包静态游戏头像图库；未知 ID 和图片加载失败时使用本地占位图。
+依赖缓存、原生运行库包、游戏 DB、导出资产和构建产物不纳入源码仓库。自 1.3 起使用内置链接索引与在线头像，不再要求或打包静态游戏头像图库；未知 ID 和图片加载失败时使用本地占位图。
 
 <a id="build"></a>
 ## 构建与打包
@@ -138,8 +138,8 @@ dotnet run --project backend/Hok.Catalog.Tests -c Release -- .
 源码编译与完整桌面发行包是不同步骤。原生 FBX／FMOD／编解码组件、媒体工具、素材和打包目录说明见[构建输入](docs/BUILD.md)。不要把第三方二进制复制进 Git 仓库。
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File tooling/build-desktop.ps1 -OutputDirectory build/HOK-BetaStudio-1.3-win-x64
-powershell -ExecutionPolicy Bypass -File tooling/package-desktop.ps1 -BuildDirectory build/HOK-BetaStudio-1.3-win-x64
+powershell -ExecutionPolicy Bypass -File tooling/build-desktop.ps1 -OutputDirectory build/HOK-BetaStudio-1.4-win-x64
+powershell -ExecutionPolicy Bypass -File tooling/package-desktop.ps1 -BuildDirectory build/HOK-BetaStudio-1.4-win-x64
 ```
 
 演示页面单独维护，不纳入此仓库。上方图像均为真实桌面程序截图。
@@ -149,7 +149,7 @@ powershell -ExecutionPolicy Bypass -File tooling/package-desktop.ps1 -BuildDirec
 <a id="download"></a>
 ## 下载与使用
 
-从[发行页面](https://github.com/Alanshown/HOK-BetaStudio/releases/tag/1.3)选择实际已发布版本的 Setup 安装程序或便携 ZIP。源码更新不等于二进制附件已发布；GitHub 自动生成的 **Source code** 是源码，不是可运行程序。参阅[安装、SHA-256 校验与故障排查](docs/INSTALL.md#简体中文)。
+从[发行页面](https://github.com/Alanshown/HOK-BetaStudio/releases)选择实际已发布版本的 Setup 安装程序或便携 ZIP。源码更新不等于二进制附件已发布；GitHub 自动生成的 **Source code** 是源码，不是可运行程序。参阅[安装、SHA-256 校验与故障排查](docs/INSTALL.md#简体中文)。
 
 解压**整个便携 ZIP**并运行 `HOK BetaStudio.exe`，或者使用 Windows 安装程序。不要将 EXE 与 `worker`、`ui`、`assets` 文件夹分开。自包含 .NET 包仍需要 [Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/#download)，Setup 不会自动安装它。目前程序包未进行代码签名。
 
@@ -162,6 +162,9 @@ powershell -ExecutionPolicy Bypass -File tooling/package-desktop.ps1 -BuildDirec
 
 | 检查 | 已观察结果 |
 |---|---|
+| 网格导出（1.4） | 8 个真实网格分别导出 OBJ／FBX 并由独立读取器回读，几何一致；两组桌面样本连续导出通过 |
+| 动画 FBX（1.4） | 6 个合成 FBX 样本回读，验证骨架、根曲线、覆盖控制器片段及动画采样播放 |
+| 按需导入／预览 | 逐一测试 20 个 DB，704,337 条可见资产；原包哈希不变，导入阶段显式预览媒体物化量为零；[范围与限制](docs/LAZY-PREVIEW-VALIDATION.md) |
 | 资源索引／桌面同步（1.3） | 41 项索引检查与 22 项桌面检查，涵盖真实 CDN 图片、静默检测、缓存清理、三语与多米诺刷新 |
 | 命名识别与递归扫描 | 27 项检查；在 12 层目录中找到 14 个 DB／分片 |
 | 零修改重建基线 | 两组包共 16 项检查，基线输出逐字节一致 |
