@@ -32,6 +32,10 @@ internal static class HokTypeSchemas
         }}
     }
     public static TypeTree Find(ObjectReader reader){
+        if(reader.Game.Type.IsHonorOfKings()&&reader.assetsFile.m_RefTypes!=null)
+            foreach(var reference in reader.assetsFile.m_RefTypes)
+                reference.m_Type??=reader.assetsFile.assetsManager.FindQtsTypeSchema(reference);
+        var bundled=reader.assetsFile.assetsManager.FindQtsTypeSchema(reader);if(bundled!=null)return bundled;
         if(!reader.Game.Type.IsHonorOfKings()||reader.assetsFile.unityVersion!="2022.3.5f1")return null;
         var type=reader.serializedType;
         return type?.m_OldTypeHash!=null&&Profiles.TryGetValue((int)reader.type,out var p)&&p.Hashes.Contains(Convert.ToHexString(type.m_OldTypeHash))?p.Tree:null;

@@ -58,10 +58,20 @@ public class QtsVFSFile
                 Range(reader,x,32);reader.Position=x;
                 if(reader.ReadInt32()!=x)throw new System.IO.InvalidDataException("Record self-offset mismatch");
                 int next=reader.ReadInt32();if(next!=-1)records.Enqueue(next);
-                reader.Position+=16;int compressed=reader.ReadInt32()-4,decoded=reader.ReadInt32();long data=reader.Position;
+                int recordBytes=reader.ReadInt32();
+                Range(reader,x,recordBytes);
+                reader.Position=x+20;int keyBytes=reader.ReadInt32();
+                // Main/index DBs use an eight-byte resource key. Shard keys
+                // additionally carry the main/sub block numbers. Reading 16
+                // bytes unconditionally borrowed the next record's header,
+                // or dropped a valid final record ending exactly at EOF.
+                if(keyBytes is not (8 or 16))throw new System.IO.InvalidDataException($"Unsupported VFS key length {keyBytes}");
+                int compressed=reader.ReadInt32()-4,decoded=reader.ReadInt32();long data=reader.Position;
                 if(compressed<0||decoded<0)throw new System.IO.InvalidDataException("Negative chunk size");
-                Range(reader,data,compressed);long trailer=(data+compressed+3)&~3L;Range(reader,trailer,16);reader.Position=trailer;
-                ulong id=reader.ReadUInt64();int main=reader.ReadInt32(),sub=reader.ReadInt32();
+                Range(reader,data,compressed);long trailer=(data+compressed+3)&~3L;
+                if(recordBytes<32||trailer+keyBytes>(long)x+recordBytes)throw new System.IO.InvalidDataException("VFS value/key exceeds its record boundary");
+                Range(reader,trailer,keyBytes);reader.Position=trailer;
+                ulong id=reader.ReadUInt64();int main=keyBytes==16?reader.ReadInt32():0,sub=keyBytes==16?reader.ReadInt32():0;
                 if(!Entries.TryGetValue(id,out var chunks))Entries.Add(id,chunks=new());
                 chunks.Add(new FHoKCompressedChunk(data,compressed,decoded,main,sub));
             }catch(Exception e){Issues.Add($"Record {x}: {e.Message}");}

@@ -1,4 +1,5 @@
 using System.Text;
+using SixLabors.ImageSharp;
 namespace Hok.Worker;
 internal sealed record ResourceAsset(string Id,string Name,string Source,string Type,string Extension,byte[] Bytes,string? Parent=null,string? Warning=null,bool RawAvailable=true,long? DeclaredBytes=null,AssetStudio.ContainerEntry? Backing=null,ResourceAsset? SliceParent=null,long SliceOffset=0,long? SliceLength=null)
 {
@@ -11,9 +12,9 @@ internal sealed record ResourceAsset(string Id,string Name,string Source,string 
     public void CopyTo(Stream output){using var input=Open();input.CopyTo(output);}
     public bool IsAudio=>Type is "WwiseAudio" or "AudioFile";
     public bool IsBank=>Type=="WwiseBank";
-    public bool IsStructured=>Type is "HokObjectTree" or "HokActionTimeline" or "XmlAsset" or "TextFile";
-    public string Preview=>IsBank?"bank":IsAudio?"audio":Extension is "png" or "jpg" or "bmp"?"image":"data";
-    public string[] Formats=>!RawAvailable?new[]{"json"}:IsStructured?(Type=="HokObjectTree"?new[]{"json","xml","original","raw"}:new[]{"original","json","raw"}):IsBank
+    public bool IsStructured=>Type is "HokObjectTree" or "HokActionTimeline" or "XmlAsset" or "TextFile" or "QtsChecksumManifest" or "QtsRoutingCatalog" or "StdrTable" or "QtsKeyValueDatabase" or "QtsTypeTreeDatabase" or "QtsResourceMap" or "QtsScriptDependencies" or "NumpyArchive" or "NumpyArray" or "ZipArchive" or "AndroidPackage";
+    public string Preview=>IsBank?"bank":IsAudio?"audio":Type=="ImageFile"?"image":"data";
+    public string[] Formats=>!RawAvailable?new[]{"json"}:IsStructured?(Type=="HokObjectTree"?new[]{"json","xml","original","raw"}:new[]{"original","json","raw"}):Type=="ImageFile"?new[]{"original",Extension,"png","json","raw"}.Distinct().ToArray():IsBank
         ? new[]{"original","zip-wem"}.Concat(AudioTools.DecoderReady&&AudioTools.Mp3Ready?new[]{"zip-mp3"}:[]).Concat(new[]{"raw","json"}).ToArray()
         : IsAudio
         ? new[]{"original",Extension}.Concat(AudioTools.DecoderReady||Type=="AudioFile"?new[]{"wav"}:[]).Concat(AudioTools.Mp3Ready&&(AudioTools.DecoderReady||Type=="AudioFile")?new[]{"mp3"}:[]).Append("raw").Distinct().ToArray()
@@ -34,6 +35,7 @@ internal sealed record ResourceAsset(string Id,string Name,string Source,string 
             if(IsAudio||IsBank)AudioTools.WriteOriginal(bytes,output);else File.WriteAllBytes(output,bytes);return;
         }
         if(IsStructured&&format is "json" or "xml"){HokStructured.Write(this,format,output);return;}
+        if(Type=="ImageFile"&&format=="png"){using var input=Open();using var image=Image.Load(input);image.SaveAsPng(output);return;}
         if(format=="json"){File.WriteAllText(output,System.Text.Json.JsonSerializer.Serialize(Describe(),Program.Json));return;}
         if(format=="wav"){AudioTools.Decode(Data,Extension,output);return;}
         if(format=="mp3"){
@@ -47,6 +49,11 @@ internal sealed record ResourceAsset(string Id,string Name,string Source,string 
     public static (string type,string extension) Detect(byte[] bytes,string fallback,long? length=null)
     {
         var s=bytes.AsSpan();
+        if(fallback=="NumpyArchive")return("NumpyArchive","npz");
+        if(fallback=="ZipArchive")return("ZipArchive","zip");
+        if(fallback=="AndroidPackage")return("AndroidPackage","apk");
+        if(fallback=="NumpyArray"||s.StartsWith(new byte[]{147,78,85,77,80,89}))return("NumpyArray","npy");
+        if(fallback is "QtsKeyValueDatabase" or "QtsTypeTreeDatabase" or "QtsResourceMap" or "QtsScriptDependencies")return(fallback,"db");
         if(fallback=="QtsRawMetadata")return("QtsRawMetadata","bin");
         if(fallback=="CompressedQtsChunk")return("CompressedQtsChunk","qtschunk");
         if(s.StartsWith("AKPK"u8))return("WwisePackage","pck");
@@ -61,6 +68,12 @@ internal sealed record ResourceAsset(string Id,string Name,string Source,string 
         if(s.StartsWith("FSB4"u8)||s.StartsWith("FSB5"u8))return("AudioFile","fsb");
         if(s.StartsWith(new byte[]{137,80,78,71,13,10,26,10}))return("ImageFile","png");
         if(s.StartsWith(new byte[]{255,216,255}))return("ImageFile","jpg");
+        if(s.Length>=12&&s[..4].SequenceEqual("RIFF"u8)&&s.Slice(8,4).SequenceEqual("WEBP"u8))return("ImageFile","webp");
+        if(s.StartsWith("GIF87a"u8)||s.StartsWith("GIF89a"u8))return("ImageFile","gif");
+        if(s.StartsWith("dex\n"u8)&&s.Length>=8&&s[7]==0)return("AndroidDex","dex");
+        if(s.StartsWith(new byte[]{127,69,76,70}))return("ElfBinary","so");
+        if(s.Length>=8&&s[..4].SequenceEqual(new byte[]{3,0,8,0})&&System.Buffers.Binary.BinaryPrimitives.ReadUInt32LittleEndian(s[4..])==length)return("AndroidBinaryXml","xml");
+        if(s.Length>=12&&s[..4].SequenceEqual(new byte[]{2,0,12,0})&&System.Buffers.Binary.BinaryPrimitives.ReadUInt32LittleEndian(s[4..])==length)return("AndroidResourceTable","arsc");
         if(s.Length>=26&&s.StartsWith("BM"u8)&&System.Buffers.Binary.BinaryPrimitives.ReadUInt32LittleEndian(s.Slice(2))==(length??s.Length))return("ImageFile","bmp");
         if(s.StartsWith("QTSF_PACKAGE"u8))return("PackageMetadata","bytes");
         if(fallback=="AssetsFile")return("SerializedFile","assets");

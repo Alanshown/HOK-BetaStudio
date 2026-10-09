@@ -44,7 +44,8 @@ internal static class Exporters {
     baseFields=new{mono.m_Name,mono.m_Enabled,gameObject=new{mono.m_GameObject.m_FileID,pathId=mono.m_GameObject.m_PathID.ToString()},script=new{mono.m_Script.m_FileID,pathId=mono.m_Script.m_PathID.ToString()}},
     managedTypes=obj.assetsFile.m_RefTypes?.Select(t=>new{index=t.m_ScriptTypeIndex,className=t.m_KlassName,nameSpace=t.m_NameSpace,assembly=t.m_AsmName,typeHash=t.m_OldTypeHash==null?null:Convert.ToHexString(t.m_OldTypeHash)}),
     typeDependencies=obj.serializedType?.m_TypeDependencies,consumedBytes=consumed,unparsedBytes=raw.Length-consumed,
-    unparsedHex=Convert.ToHexString(raw.AsSpan(consumed)),note="Base fields and retained managed-reference type metadata. Script-specific payload fields require a matching schema; this is not a complete semantic export."};
+    scriptSchema=HokScriptSchemas.Inspect(mono),
+    unparsedHex=Convert.ToHexString(raw.AsSpan(consumed)),note="Base-parser byte counts remain separate from optional fingerprint-validated script schema coverage. Unknown field meanings are not complete semantic interpretation."};
   }
   else if(obj is ShaderVariantCollection variants){
    obj.assetsFile.ParseStatuses.TryGetValue(obj.m_PathID,out var state);
@@ -53,6 +54,12 @@ internal static class Exporters {
     parseStatus=state?.Status,complete=state?.RemainingBytes==0,consumedBytes=consumed,unparsedBytes=raw.Length-consumed,
     unparsedHex=Convert.ToHexString(raw.AsSpan(consumed)),
     note="Shader references, keywords and pass types are decoded. Any HOK extension bytes remain explicitly unparsed; this export is not a complete platform pipeline-state cache."};
+  }
+  else if(obj is HokResourceVolumeContext volume){
+   obj.assetsFile.ParseStatuses.TryGetValue(obj.m_PathID,out var state);var raw=obj.GetRawData();int consumed=checked((int)(state?.ConsumedBytes??0));
+   value=new{type="ResourceVolumeContext",volume.m_Name,volume.ReferencedObjects,volume.ClassTypeHashes,volume.EmptyExtensionTable,
+    parseStatus=state?.Status,semanticComplete=false,consumedBytes=consumed,unparsedBytes=raw.Length-consumed,
+    unparsedHex=Convert.ToHexString(raw.AsSpan(consumed)),note="Resource-volume object and class/hash tables; not a hero/skin usage manifest. Trailing platform fields remain unknown."};
   }
   return JsonConvert.SerializeObject(value,Formatting.Indented,new JsonSerializerSettings{ReferenceLoopHandling=ReferenceLoopHandling.Ignore,MaxDepth=64,Converters={new StringEnumConverter()}});
  }

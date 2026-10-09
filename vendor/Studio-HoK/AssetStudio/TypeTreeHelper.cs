@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
+using System.Linq;
 using System.Text;
 
 namespace AssetStudio
@@ -10,6 +11,10 @@ namespace AssetStudio
     {
         public static string ReadTypeString(TypeTree m_Type, ObjectReader reader)
         {
+            // Dynamic managed data cannot be rendered by the static-node-only
+            // dump walker. Use the same exact reader as JSON/reference export.
+            if(m_Type.m_Nodes.Any(n=>n.m_Type=="ManagedReferencesRegistry"))
+                return Newtonsoft.Json.JsonConvert.SerializeObject(ReadType(m_Type,reader),Newtonsoft.Json.Formatting.Indented);
             reader.Reset();
             var sb = new StringBuilder();
             var m_Nodes = m_Type.m_Nodes;
@@ -43,7 +48,7 @@ namespace AssetStudio
                     value = reader.ReadByte();
                     break;
                 case "char":
-                    value = BitConverter.ToChar(reader.ReadBytes(2), 0);
+                    value = m_Node.m_ByteSize==1?(char)reader.ReadByte():BitConverter.ToChar(reader.ReadBytes(2), 0);
                     break;
                 case "short":
                 case "SInt16":
@@ -163,7 +168,7 @@ namespace AssetStudio
                 reader.AlignStream();
         }
 
-        public static OrderedDictionary ReadType(TypeTree m_Types, ObjectReader reader)
+        public static OrderedDictionary ReadType(TypeTree m_Types, ObjectReader reader, Action<string,int,long,long> reference = null, Action<string,string,long> stringField = null)
         {
             reader.Reset();
             var obj = new OrderedDictionary();
@@ -172,7 +177,7 @@ namespace AssetStudio
             {
                 var m_Node = m_Nodes[i];
                 var varNameStr = m_Node.m_Name;
-                obj[varNameStr] = ReadValue(m_Nodes, reader, ref i);
+                obj[varNameStr] = ReadValue(m_Nodes, reader, ref i, varNameStr, reference, stringField);
             }
             var readed = reader.Position - reader.byteStart;
             if (readed != reader.byteSize)
@@ -182,10 +187,19 @@ namespace AssetStudio
             return obj;
         }
 
-        private static object ReadValue(List<TypeTreeNode> m_Nodes, EndianBinaryReader reader, ref int i)
+        private static object ReadValue(List<TypeTreeNode> m_Nodes, EndianBinaryReader reader, ref int i, string field="", Action<string,int,long,long> reference=null, Action<string,string,long> stringField=null, bool inRegistry=false, int depth=0)
         {
+            if(depth>256)throw new InvalidDataException("Type tree managed/class nesting limit at "+field);
+            long fieldOffset=reader.Position;
             var m_Node = m_Nodes[i];
             var varTypeStr = m_Node.m_Type;
+            if(varTypeStr=="ManagedReferencesRegistry")
+            {
+                // A host serializes one registry. Dynamic types can carry the
+                // same schema node, but do not serialize another nested table.
+                if(inRegistry){i+=GetNodes(m_Nodes,i).Count-1;return null;}
+                inRegistry=true;
+            }
             Logger.Verbose($"Reading {m_Node.m_Name} of type {varTypeStr}");
             object value;
             var align = (m_Node.m_MetaFlag & 0x4000) != 0;
@@ -198,7 +212,7 @@ namespace AssetStudio
                     value = reader.ReadByte();
                     break;
                 case "char":
-                    value = BitConverter.ToChar(reader.ReadBytes(2), 0);
+                    value = m_Node.m_ByteSize==1?(char)reader.ReadByte():BitConverter.ToChar(reader.ReadBytes(2), 0);
                     break;
                 case "short":
                 case "SInt16":
@@ -237,6 +251,7 @@ namespace AssetStudio
                     break;
                 case "string":
                     value = reader.ReadAlignedString();
+                    stringField?.Invoke(field,(string)value,fieldOffset);
                     var toSkip = GetNodes(m_Nodes, i);
                     i += toSkip.Count - 1;
                     break;
@@ -250,12 +265,13 @@ namespace AssetStudio
                         var next = 4 + first.Count;
                         var second = GetNodes(map, next);
                         var size = reader.ReadInt32();
+                        if(size<0)throw new InvalidDataException("Negative map count at "+field);
                         var dic = new List<KeyValuePair<object, object>>();
                         for (int j = 0; j < size; j++)
                         {
                             int tmp1 = 0;
                             int tmp2 = 0;
-                            dic.Add(new KeyValuePair<object, object>(ReadValue(first, reader, ref tmp1), ReadValue(second, reader, ref tmp2)));
+                            dic.Add(new KeyValuePair<object, object>(ReadValue(first, reader, ref tmp1,field+"["+j+"].first",reference,stringField,inRegistry,depth+1), ReadValue(second, reader, ref tmp2,field+"["+j+"].second",reference,stringField,inRegistry,depth+1)));
                         }
                         value = dic;
                         break;
@@ -276,11 +292,14 @@ namespace AssetStudio
                             var vector = GetNodes(m_Nodes, i);
                             i += vector.Count - 1;
                             var size = reader.ReadInt32();
+                            if(size<0)throw new InvalidDataException("Negative array count at "+field);
                             var list = new List<object>();
                             for (int j = 0; j < size; j++)
                             {
                                 int tmp = 3;
-                                list.Add(ReadValue(vector, reader, ref tmp));
+                                long before=reader.Position;
+                                list.Add(ReadValue(vector, reader, ref tmp,field+"["+j+"]",reference,stringField,inRegistry,depth+1));
+                                if(reader.Position==before&&size>100000)throw new InvalidDataException("Oversized zero-width array at "+field);
                             }
                             value = list;
                             break;
@@ -294,16 +313,36 @@ namespace AssetStudio
                             {
                                 var classmember = @class[j];
                                 var name = classmember.m_Name;
-                                obj[name] = ReadValue(@class, reader, ref j);
+                                if(varTypeStr=="ReferencedObject"&&classmember.m_Type=="ReferencedObjectData")
+                                {
+                                    if(reader is not ObjectReader owner)throw new InvalidDataException("Managed reference requires its owning SerializedFile");
+                                    var dynamicTree=ResolveManagedType(owner,obj);
+                                    int root=0;
+                                    obj[name]=dynamicTree==null?null:ReadValue(dynamicTree.m_Nodes,reader,ref root,field+"."+name,reference,stringField,inRegistry,depth+1);
+                                    j+=GetNodes(@class,j).Count-1;
+                                }
+                                else obj[name] = ReadValue(@class, reader, ref j,field+"."+name,reference,stringField,inRegistry,depth+1);
                             }
                             value = obj;
                             break;
                         }
                     }
             }
+            if(reference!=null && varTypeStr.StartsWith("PPtr<",StringComparison.Ordinal) && value is OrderedDictionary pointer && pointer.Contains("m_FileID") && pointer.Contains("m_PathID"))
+                reference(field,Convert.ToInt32(pointer["m_FileID"]),Convert.ToInt64(pointer["m_PathID"]),fieldOffset);
             if (align)
                 reader.AlignStream();
             return value;
+        }
+
+        private static TypeTree ResolveManagedType(ObjectReader reader,OrderedDictionary value)
+        {
+            if(value["type"] is not OrderedDictionary identity||identity["class"] is not string name||identity["ns"] is not string ns||identity["asm"] is not string assembly)
+                throw new InvalidDataException("Incomplete managed reference type identity");
+            if(name.Length==0)return null; // Null/missing managed object; no serialized data.
+            var matches=reader.assetsFile.m_RefTypes?.Where(t=>t.m_KlassName==name&&t.m_NameSpace==ns&&t.m_AsmName==assembly).ToArray();
+            if(matches==null||matches.Length!=1)throw new InvalidDataException("Missing or ambiguous managed reference type: "+assembly+" / "+ns+"."+name);
+            return matches[0].m_Type??throw new InvalidDataException("Missing exact managed reference schema: "+assembly+" / "+ns+"."+name);
         }
 
         private static List<TypeTreeNode> GetNodes(List<TypeTreeNode> m_Nodes, int index)

@@ -15,9 +15,23 @@ namespace AssetStudio
         private readonly Dictionary<string, Dictionary<long, SerializedFile>> sourceObjects = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, List<SerializedFile>> filesByName = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, SerializedFile> filesByIdentity = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string,(int Count,SerializedFile[] Files)> explicitQtsExternalFiles = new(StringComparer.OrdinalIgnoreCase);
         private void ClearReferenceIndex()
         {
-            referenceIndexCount = -1; sourceObjects.Clear(); filesByName.Clear(); filesByIdentity.Clear();
+            referenceIndexCount = -1; sourceObjects.Clear(); filesByName.Clear(); filesByIdentity.Clear();explicitQtsExternalFiles.Clear();
+        }
+        internal SerializedFile[] FindExplicitQtsExternal(string path,long pathId)
+        {
+            string id=QtsVFSFile.Compute(path,path[0]!='/').ToString();
+            if(!explicitQtsExternalFiles.TryGetValue(id,out var cached)||cached.Count!=assetsFileList.Count)
+                explicitQtsExternalFiles[id]=cached=(assetsFileList.Count,assetsFileList.Where(f=>f.containerEntryId==id).ToArray());
+            return cached.Files.Where(f=>f.ObjectsDic.ContainsKey(pathId)||f.m_Objects.Any(o=>o.m_PathID==pathId)).ToArray();
+        }
+        // Hosts that deliberately mutate public file identities/object maps
+        // after loading must invalidate the derived lookup, just as loading does.
+        public void InvalidateReferenceResolution()
+        {
+            resolvedExternals.Clear(); ClearReferenceIndex();
         }
         private void EnsureReferenceIndex()
         {
@@ -30,8 +44,8 @@ namespace AssetStudio
                 names.Add(file);
                 if (string.IsNullOrEmpty(file.originalPath)) continue;
                 if (!sourceObjects.TryGetValue(file.originalPath, out var objects)) sourceObjects.Add(file.originalPath, objects = new());
-                foreach (var metadata in file.m_Objects)
-                    if (!objects.TryAdd(metadata.m_PathID, file)) objects[metadata.m_PathID] = null;
+                foreach (var pathId in file.ObjectsDic.Keys)
+                    if (!objects.TryAdd(pathId, file)) objects[pathId] = null;
             }
             referenceIndexCount = assetsFileList.Count;
         }

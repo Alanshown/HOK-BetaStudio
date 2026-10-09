@@ -10,6 +10,9 @@ namespace AssetStudio
         public string m_ClassName;
         public string m_Namespace;
         public string m_AssemblyName;
+        public int m_ExecutionOrder;
+        public uint? m_LegacyPropertiesHash;
+        public byte[] m_PropertiesHash;
 
         public override string Name => string.IsNullOrEmpty(m_Name) ? m_ClassName : m_Name;
 
@@ -17,15 +20,15 @@ namespace AssetStudio
         {
             if (version[0] > 3 || (version[0] == 3 && version[1] >= 4)) //3.4 and up
             {
-                var m_ExecutionOrder = reader.ReadInt32();
+                m_ExecutionOrder = reader.ReadInt32();
             }
             if (version[0] < 5) //5.0 down
             {
-                var m_PropertiesHash = reader.ReadUInt32();
+                m_LegacyPropertiesHash = reader.ReadUInt32();
             }
             else
             {
-                var m_PropertiesHash = reader.ReadBytes(16);
+                m_PropertiesHash = reader.ReadBytes(16);
             }
             if (version[0] < 3) //3.0 down
             {

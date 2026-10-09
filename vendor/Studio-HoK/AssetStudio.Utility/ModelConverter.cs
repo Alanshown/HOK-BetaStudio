@@ -178,7 +178,7 @@ namespace AssetStudio
                 ConvertMeshRenderer(m_GameObject.m_SkinnedMeshRenderer);
             }
 
-            if (m_GameObject.m_Animator != null && options.collectAnimations && requestedAnimations == null)
+            if (m_GameObject.m_Animator != null && (options.collectAnimations || requestedAnimations != null))
                 CollectAnimationClip(m_GameObject.m_Animator);
             if (m_GameObject.m_Animation != null && (options.collectAnimations || requestedAnimations != null))
             {
@@ -206,7 +206,13 @@ namespace AssetStudio
         {
             if (m_Animator.m_Controller.TryGet(out var m_Controller))
             {
-                animationClipHashSet.UnionWith(ControllerClips(m_Controller, new HashSet<RuntimeAnimatorController>()));
+                foreach(var clip in ControllerClips(m_Controller, new HashSet<RuntimeAnimatorController>()))
+                {
+                    if(!(requestedAnimations?.Contains(clip)??options.collectAnimations))continue;
+                    animationClipHashSet.Add(clip);
+                    if(!boundAnimationPathDic.ContainsKey(clip)&&m_Animator.m_GameObject.TryGet(out var owner)&&owner.m_Transform!=null)
+                        boundAnimationPathDic.Add(clip,GetTransformPath(owner.m_Transform));
+                }
             }
         }
 
@@ -284,8 +290,14 @@ namespace AssetStudio
             var mesh = GetMesh(meshR);
             if (mesh == null || (options.selectedMesh != null && !ReferenceEquals(mesh, options.selectedMesh)))
                 return;
+            // A Mesh export selects one asset, not every renderer instance of
+            // that asset in the retained animation hierarchy. Full GameObject
+            // exports have selectedMesh == null and keep every instance.
+            if(options.selectedMesh!=null&&MeshList.Count>0){SkippedMeshInstances++;return;}
             ConvertMesh(mesh, meshR);
         }
+
+        public int SkippedMeshInstances {get;private set;}
 
         private void ConvertMesh(Mesh mesh, Renderer meshR)
         {
@@ -941,7 +953,7 @@ namespace AssetStudio
                             for (int curveIndex = 0; curveIndex < m_ACLClip.CurveCount;)
                             {
                                 var index = curveIndex;
-                                ReadCurveData(iAnim, m_ClipBindingConstant, index, time, values, (int)frameOffset, ref curveIndex);
+                                ReadCurveData(animationClip, iAnim, m_ClipBindingConstant, index, time, values, (int)frameOffset, ref curveIndex);
                             }
 
                         }
@@ -955,7 +967,7 @@ namespace AssetStudio
                             var index = frame.keyList[curveIndex].index;
                             if (!options.game.Type.IsSRGroup())
                                 index += (int)aclCount;
-                            ReadCurveData(iAnim, m_ClipBindingConstant, index, frame.time, streamedValues, 0, ref curveIndex);
+                            ReadCurveData(animationClip, iAnim, m_ClipBindingConstant, index, frame.time, streamedValues, 0, ref curveIndex);
                         }
                     }
                     var m_DenseClip = m_Clip.m_DenseClip;
@@ -969,7 +981,7 @@ namespace AssetStudio
                             var index = streamCount + curveIndex;
                             if (!options.game.Type.IsSRGroup())
                                 index += (int)aclCount;
-                            ReadCurveData(iAnim, m_ClipBindingConstant, (int)index, time, m_DenseClip.m_SampleArray, (int)frameOffset, ref curveIndex);
+                            ReadCurveData(animationClip, iAnim, m_ClipBindingConstant, (int)index, time, m_DenseClip.m_SampleArray, (int)frameOffset, ref curveIndex);
                         }
                     }
                     if (m_ACLClip.IsSet && options.game.Type.IsSRGroup())
@@ -982,7 +994,7 @@ namespace AssetStudio
                             for (int curveIndex = 0; curveIndex < m_ACLClip.CurveCount;)
                             {
                                 var index = (int)(curveIndex + m_DenseClip.m_CurveCount + streamCount);
-                                ReadCurveData(iAnim, m_ClipBindingConstant, index, time, values, (int)frameOffset, ref curveIndex);
+                                ReadCurveData(animationClip, iAnim, m_ClipBindingConstant, index, time, values, (int)frameOffset, ref curveIndex);
                             }
 
                         }
@@ -997,7 +1009,7 @@ namespace AssetStudio
                             for (int curveIndex = 0; curveIndex < m_ConstantClip.data.Length;)
                             {
                                 var index = aclCount + streamCount + denseCount + curveIndex;
-                                ReadCurveData(iAnim, m_ClipBindingConstant, (int)index, time2, m_ConstantClip.data, 0, ref curveIndex);
+                                ReadCurveData(animationClip, iAnim, m_ClipBindingConstant, (int)index, time2, m_ConstantClip.data, 0, ref curveIndex);
                             }
                             time2 = animationClip.m_MuscleClip.m_StopTime;
                         }
@@ -1006,7 +1018,9 @@ namespace AssetStudio
             }
         }
 
-        private void ReadCurveData(ImportedKeyframedAnimation iAnim, AnimationClipBindingConstant m_ClipBindingConstant, int index, float time, float[] data, int offset, ref int curveIndex)
+        private string BindingPath(AnimationClip clip,uint hash)=>hash==0?FixBonePath(clip,""):FixBonePath(GetPathFromHash(hash));
+
+        private void ReadCurveData(AnimationClip clip, ImportedKeyframedAnimation iAnim, AnimationClipBindingConstant m_ClipBindingConstant, int index, float time, float[] data, int offset, ref int curveIndex)
         {
             var binding = m_ClipBindingConstant.FindBinding(index);
             if (binding.typeID == ClassIDType.SkinnedMeshRenderer) //BlendShape
@@ -1026,7 +1040,7 @@ namespace AssetStudio
                 var path = GetPathByChannelName(channelName);
                 if (string.IsNullOrEmpty(path))
                 {
-                    path = FixBonePath(GetPathFromHash(binding.path));
+                    path = BindingPath(clip,binding.path);
                 }
                 var track = iAnim.FindTrack(path, channelName);
                 if (track.BlendShape == null)
@@ -1038,7 +1052,7 @@ namespace AssetStudio
             }
             else if (binding.typeID == ClassIDType.Transform)
             {
-                var path = FixBonePath(GetPathFromHash(binding.path));
+                var path = BindingPath(clip,binding.path);
                 var track = iAnim.FindTrack(path);
 
                 switch (binding.attribute)

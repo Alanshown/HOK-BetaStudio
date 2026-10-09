@@ -5,12 +5,18 @@ using System.Linq;
 
 namespace AssetStudio
 {
-    public sealed class PPtr<T> : IYAMLExportable where T : Object
+    public sealed class PPtr<T> : IYAMLExportable, IObjectReference where T : Object
     {
         public int m_FileID;
         public long m_PathID;
 
         private SerializedFile assetsFile;
+        [Newtonsoft.Json.JsonIgnore] public int FileId => m_FileID;
+        [Newtonsoft.Json.JsonIgnore] public long PathId => m_PathID;
+        [Newtonsoft.Json.JsonIgnore] public long? SerializedByteOffset { get; private set; }
+        [Newtonsoft.Json.JsonIgnore] public long? ObjectByteOffset { get; private set; }
+        [Newtonsoft.Json.JsonIgnore] public string ExpectedType => typeof(T).Name;
+        public ReferenceResolution ResolveEvidence() => assetsFile.assetsManager.ResolveReference(assetsFile,m_FileID,m_PathID);
         
         public string Name => TryGet(out var obj) ? obj.Name : string.Empty;
 
@@ -23,6 +29,8 @@ namespace AssetStudio
 
         public PPtr(ObjectReader reader)
         {
+            SerializedByteOffset=reader.Position;
+            ObjectByteOffset=reader.Position-reader.byteStart;
             m_FileID = reader.ReadInt32();
             m_PathID = reader.m_Version < SerializedFileFormatVersion.Unknown_14 ? reader.ReadInt32() : reader.ReadInt64();
             assetsFile = reader.assetsFile;
@@ -38,33 +46,9 @@ namespace AssetStudio
 
         private bool TryGetAssetsFile(out SerializedFile result)
         {
-            result = null;
-            if (m_FileID == 0)
-            {
-                result = assetsFile;
-                return true;
-            }
-
-            if (m_FileID > 0 && m_FileID - 1 < assetsFile.m_Externals.Count)
-            {
-                var external = assetsFile.m_Externals[m_FileID - 1];
-                // HOK's repacked QTS SerializedFiles retain GUID-only external
-                // slots while referenced objects are embedded in the same DB.
-                // Prefer local objects, then a unique same-source target;
-                // never borrow a PathID from a different DB.
-                if (assetsFile.game.Type.IsHonorOfKings()
-                    && string.IsNullOrEmpty(external.pathName)
-                    && string.IsNullOrEmpty(external.fileName))
-                {
-                    result = assetsFile.assetsManager.ResolveHokObjectReference(assetsFile, m_PathID);
-                    return result != null;
-                }
-                // Resolve against the owner scope, not a basename or a cached list index.
-                result = assetsFile.assetsManager.ResolveExternal(assetsFile, external);
-                return result != null;
-            }
-
-            return false;
+            var resolution=ResolveEvidence();
+            result=resolution.TargetFile;
+            return resolution.CanRead;
         }
 
         public bool TryGet(out T result)
@@ -107,6 +91,7 @@ namespace AssetStudio
 
         public void Set(T m_Object)
         {
+            SerializedByteOffset=ObjectByteOffset=null; // Programmatic pointer has no original field bytes.
             var name = m_Object.assetsFile.fileName;
             if (ReferenceEquals(assetsFile, m_Object.assetsFile))
             {
@@ -135,7 +120,7 @@ namespace AssetStudio
 
         public PPtr<T2> Cast<T2>() where T2 : Object
         {
-            return new PPtr<T2>(m_FileID, m_PathID, assetsFile);
+            return new PPtr<T2>(m_FileID, m_PathID, assetsFile) { SerializedByteOffset=SerializedByteOffset, ObjectByteOffset=ObjectByteOffset };
         }
 
         public bool IsNull => m_PathID == 0 || m_FileID < 0;

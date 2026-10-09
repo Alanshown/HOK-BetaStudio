@@ -28,6 +28,7 @@ internal static partial class Program
    return new{success,failed=results.Count-success,results};
  }
  static object RawAudit(JsonElement p){
+  if(manager?.QtsLoadIsScoped==true)throw new InvalidOperationException("Scoped export loads cannot audit complete package coverage. Reload the complete DB first.");
   if(manager is null)throw new InvalidOperationException("Nothing loaded");string output=Path.GetFullPath(p.GetProperty("output").GetString()!);Directory.CreateDirectory(output);string failed=p.TryGetProperty("failedChunks",out var f)?Path.GetFullPath(f.GetString()!):Path.Combine(output,"failed_chunks");Directory.CreateDirectory(failed);var summaries=new List<object>();
   foreach(var db in manager.QtsDatabases){string key=Path.GetFileNameWithoutExtension(db.Source)+"_"+Hash(db.Source);using var rows=new StreamWriter(Path.Combine(output,key+".entries.jsonl"));var groups=new Dictionary<string,(int Count,long Bytes,double EntropySum)>();long recovered=0,expected=0,compressed=0,declared=0,unknownBytes=0;int chunks=0,okChunks=0,ok=0,unknown=0,parsed=0;
    foreach(var e in db.Entries){expected+=e.ExpectedBytes;compressed+=e.CompressedBytes;chunks+=e.Chunks.Length;okChunks+=e.Chunks.Count(c=>c.Error is null);declared+=e.Chunks.Sum(c=>(long)c.Chunk.UncompressedSize);if(e.Complete){ok++;recovered+=e.PayloadBytes;}if(e.ObjectCount>0)parsed++;bool unclassified=e.Complete&&e.ParseStatus is "unclassified-stream" or "parser-failed";

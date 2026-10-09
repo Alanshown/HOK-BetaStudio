@@ -31,17 +31,40 @@ namespace AssetStudio
                     ClassIDType.MovieTexture => new MovieTexture(reader),
                     _ => throw new NotSupportedException(type.ToString())
                 };
-                status.Parser = parsed.GetType().Name; status.Typed = true;
+                status.Parser = parsed.GetType().Name; status.Typed = true; status.Error = null;
                 status.ConsumedBytes = reader.Position - reader.byteStart;
                 status.RemainingBytes = reader.byteSize - status.ConsumedBytes;
                 status.Status = status.RemainingBytes == 0 ? "typed-complete" : "typed-partial";
+                if(status.RemainingBytes>0)
+                {
+                    parsed.serializedType.m_Type??=HokTypeSchemas.Find(reader);
+                    if(parsed.serializedType.m_Type?.m_Nodes?.Count>1)
+                    {
+                        long position=reader.Position;
+                        try
+                        {
+                            var fields=parsed.ToType();
+                            if(reader.Position-reader.byteStart!=reader.byteSize)throw new InvalidDataException("Type tree did not consume the complete deferred object");
+                            parsed.UseTypeTree=true;if(fields.Contains("m_Name")&&fields["m_Name"] is string name)parsed.SchemaName=name;
+                            status.Parser="TypeTree/"+type;status.Status="typed-complete";status.ConsumedBytes=reader.byteSize;status.RemainingBytes=0;
+                        }
+                        catch(Exception treeError){status.Error="Type tree: "+treeError.GetBaseException().Message;reader.Position=position;}
+                    }
+                }
                 value = new WeakReference<Object>(parsed);
                 return parsed;
             }
             catch (Exception e)
             {
-                failure = e.GetBaseException().Message;
-                status.Error = failure; status.Status = "parser-failed"; status.Typed = false;
+                // An unavailable cache/device or temporary resource shortage is
+                // not evidence of a malformed asset. Keep it retryable after
+                // the read failure; otherwise one failed preview poisons every
+                // later export of the same object for the entire load session.
+                bool retryable = e is OutOfMemoryException ||
+                    (e is IOException && e is not EndOfStreamException && e is not InvalidDataException);
+                failure = retryable ? null : e.GetBaseException().Message;
+                status.Error = e.GetBaseException().Message;
+                status.Status = retryable ? "deferred" : "parser-failed"; status.Typed = false;
                 status.ConsumedBytes = reader.Position - reader.byteStart;
                 status.RemainingBytes = reader.byteSize - status.ConsumedBytes;
                 throw;

@@ -4,6 +4,8 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Obj = AssetStudio.Object;
 
+if(args.Length>0&&args[0]=="--probe-bindings"){AnimationBindingProbe.Run(args[1..]);return;}
+
 // Synthetic source graph with exact expected geometry, joints and keyframes.
 // The native FBX outputs are then re-imported by test-model-fixtures.cjs.
 var output=Path.GetFullPath(args[0]);Directory.CreateDirectory(output);
@@ -56,4 +58,30 @@ Exporters.Write(mesh,"fbx",Path.Combine(output,"override.fbx"),new());
 go.m_Animator=null;go.m_Animation=animation;
 var absent=Clip("Unreferenced",9);try{Exporters.Write(absent,"fbx",Path.Combine(output,"unrelated.fbx"),new());throw new Exception("Unlinked animation accepted");}catch(InvalidDataException){Check(true,"Unreferenced clip is not paired with an unrelated model");}
 mesh.m_Vertices[0]=float.NaN;try{Exporters.Write(mesh,"obj",Path.Combine(output,"invalid.obj"),new());throw new Exception("NaN accepted");}catch(InvalidDataException){Check(true,"Invalid geometry cannot be reported as a successful OBJ");}mesh.m_Vertices[0]=0;
+var instanceGo=Add<GameObject>(ClassIDType.GameObject);instanceGo.m_Name="SecondInstance";instanceGo.m_Components=[];
+var instanceTransform=Add<Transform>(ClassIDType.Transform);instanceGo.m_Transform=instanceTransform;instanceTransform.m_GameObject=Ptr(instanceGo);instanceTransform.m_Father=Ptr(transform);instanceTransform.m_Children=[];instanceTransform.m_LocalRotation=new(0,0,0,1);instanceTransform.m_LocalScale=Vector3.One;transform.m_Children=[Ptr(bone),Ptr(instanceTransform)];
+var instanceSkin=Add<SkinnedMeshRenderer>(ClassIDType.SkinnedMeshRenderer);instanceSkin.m_GameObject=Ptr(instanceGo);instanceSkin.m_Mesh=Ptr(mesh);instanceSkin.m_Bones=[Ptr(bone)];instanceSkin.m_Materials=[];instanceGo.m_SkinnedMeshRenderer=instanceSkin;
+var selectedModel=new ModelConverter(go,Options(true) with{selectedMesh=mesh});
+Check(selectedModel.MeshList.Count==1&&selectedModel.SkippedMeshInstances==1,"Mesh-asset export retains one geometry instance in a multi-instance hierarchy");
+Check(new ModelConverter(go,Options(false)).MeshList.Count==2,"Whole GameObject export still preserves both mesh instances");
+Exporters.Write(mesh,"fbx",Path.Combine(output,"instanced-selected.fbx"),new());
+var modern=Clip("ModernRoot",0);modern.m_PositionCurves.Clear();modern.m_Legacy=false;modern.version=[2022,3,5,1];
+modern.m_ClipBindingConstant=new(){genericBindings=[new(){path=0,attribute=1,typeID=ClassIDType.Transform,version=modern.version,script=Ptr<Obj>(null)}],pptrCurveMapping=[]};
+modern.m_MuscleClip=Empty<ClipMuscleConstant>();modern.m_MuscleClip.m_StopTime=1;
+var dense=Empty<DenseClip>();dense.m_SampleRate=30;dense.m_SampleArray=[];
+modern.m_MuscleClip.m_Clip=new AssetStudio.Clip{m_StreamedClip=new(){data=[],curveCount=0},m_DenseClip=dense,m_ConstantClip=new(){data=[2,0,0]}};
+var modernController=Add<AnimatorController>(ClassIDType.AnimatorController);modernController.m_AnimationClips=[Ptr(modern)];
+var childAnimator=Add<Animator>(ClassIDType.Animator);childAnimator.version=modern.version;childAnimator.m_GameObject=Ptr(boneGo);childAnimator.m_Avatar=Ptr<Avatar>(null);childAnimator.m_HasTransformHierarchy=true;childAnimator.m_Controller=new PPtr<RuntimeAnimatorController>(0,modernController.m_PathID,file);boneGo.m_Animator=childAnimator;
+var modernModel=new ModelConverter(boneGo,Options(false),[modern]);
+Check(modernModel.AnimationList.Single().TrackList.Single().Path=="Rig/Joint","Modern hash-zero curves bind to the actual child Animator, not an unknown path or the outer root");
+Check(modernModel.AnimationList.Single().TrackList.Single().Translations.All(k=>k.value.X==-2),"Modern root curve values retain handedness conversion");
+Exporters.Write(modern,"fbx",Path.Combine(output,"modern-root.fbx"),new());
+var scopedClip=Clip("ScopedJoint",2);scopedClip.m_PositionCurves[0].path="Joint";animation.m_Animations=[..animation.m_Animations,Ptr(scopedClip)];
+var stripped=Add<GameObject>(ClassIDType.GameObject);file.ObjectsDic.Remove(stripped.m_PathID);stripped.m_PathID=-999;file.ObjectsDic.Add(stripped.m_PathID,stripped);stripped.m_Name="StrippedVariant";stripped.m_Components=[];
+var strippedTransform=Add<Transform>(ClassIDType.Transform);stripped.m_Transform=strippedTransform;strippedTransform.m_GameObject=Ptr(stripped);strippedTransform.m_Father=Ptr<Transform>(null);strippedTransform.m_Children=[];strippedTransform.m_LocalRotation=new(0,0,0,1);strippedTransform.m_LocalScale=Vector3.One;
+var strippedAnimation=Add<Animation>(ClassIDType.Animation);strippedAnimation.m_GameObject=Ptr(stripped);strippedAnimation.m_Animation=Ptr(scopedClip);strippedAnimation.m_Animations=[];stripped.m_Animation=strippedAnimation;
+var relatedRoots=AnimationPreview.FindRoots(manager,scopedClip);
+Check(relatedRoots.Count==2&&relatedRoots.OrderBy(g=>g.m_PathID).First()==stripped,"Clip regression includes a first-sorted related variant with no required Joint");
+Check(AnimationPreview.SelectBestRoot(relatedRoots,scopedClip)==go&&AnimationPreview.SelectBestRoot(relatedRoots.AsEnumerable().Reverse().ToArray(),scopedClip)==go,"Root selection uses real bound curves and is stable when candidate order changes");
+Exporters.Write(scopedClip,"fbx",Path.Combine(output,"variant-clip.fbx"),new());
 File.WriteAllText(Path.Combine(output,"report.json"),JsonSerializer.Serialize(new{passed=checks.Count,checks}));

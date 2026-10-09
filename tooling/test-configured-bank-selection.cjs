@@ -1,0 +1,11 @@
+const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto'),cp=require('node:child_process'),assert=require('node:assert/strict'),{eventId}=require('./wwise-bank-evidence.cjs');
+const root=fs.mkdtempSync(path.resolve('.cache/configured-bank-')),base=path.join(root,'evidence');fs.mkdirSync(base);
+const source=path.join(root,'source.db'),bankName='Hero_GuanYu_VO_OUT',bankId=eventId(bankName),bank=Buffer.alloc(16);bank.write('BKHD');bank.writeUInt32LE(8,4);bank.writeUInt32LE(135,8);bank.writeUInt32LE(Number(bankId),12);
+const file=path.join(base,'voice.bnk');fs.writeFileSync(file,bank);
+const sha256=crypto.createHash('sha256').update(bank).digest('hex');
+fs.writeFileSync(path.join(base,'asset-exports.jsonl'),JSON.stringify({source,id:'bank:740182146',ok:true,type:'WwiseBank',format:'original',path:file,sha256})+'\n');
+fs.writeFileSync(path.join(base,'configuration-graph.json'),JSON.stringify({references:[],documents:[{source,entry:'9007199254740993',export:'table.json',matchedRecords:[{index:233,firstWord:14006,stringReferences:[{text:bankName,offset:128},{text:'unrelated text',offset:180}]}]}]}));
+function run(){const r=cp.spawnSync(process.execPath,[path.join(__dirname,'match-exported-audio-events.cjs'),root],{encoding:'utf8',windowsHide:true});assert.equal(r.status,0,r.stderr);return JSON.parse(fs.readFileSync(path.join(base,'audio-event-bank-links.json')));}
+let result=run();assert.equal(result.declaredCalls,0);assert.equal(result.configuredBankCandidates.length,1);const c=result.configuredBankCandidates[0];assert.equal(c.bankId,bankId);assert.equal(c.identityConfirmed,false);assert.equal(c.stringReference.offset,128);assert.equal(c.entry,'9007199254740993');assert.equal(c.candidates[0].source,source);
+bank[12]^=1;fs.writeFileSync(file,bank);result=run();assert.equal(result.failures.length,1);assert.equal(result.configuredBankCandidates.length,0,'A changed bank must not remain a configuration hit');
+console.log(JSON.stringify({passed:7,root,checks:['bank selected without an Event call','record evidence retained','large entry ID retained','source identity retained','candidate not promoted to confirmed','unrelated strings ignored','changed bank hash invalidates selection']}));
