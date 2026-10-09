@@ -223,6 +223,7 @@ namespace AssetStudio
         VideoClip = 329,
         ParticleSystemForceField = 330,
         SpriteMask = 331,
+        AraTrail = 366, // HOK native trail component; schema validated against TTre type hash.
         WorldAnchor = 362,
         OcclusionCullingData = 363,
         MiHoYoGrassData = 601,
@@ -390,6 +391,7 @@ namespace AssetStudio
         VisualEffectObject = 2059678085,
         VisualEffect = 2083052967,
         LocalizationAsset = 2083778819,
-        ScriptedImporter = 2089858483
+        ScriptedImporter = 2089858483,
+        ResourceVolumeContext = 90001 // HOK-specific; parser additionally checks its layout fingerprint.
     }
 }

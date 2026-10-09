@@ -29,6 +29,26 @@ internal static class AnimationPreview
         // paired merely because they contain an Idle/Run clip with the same name.
         return roots.Where(g=>g.m_Transform is not null).ToList();
     }
+    internal static GameObject SelectBestRoot(IReadOnlyCollection<GameObject> roots,AnimationClip clip)
+    {
+        if(roots.Count==0)throw new InvalidDataException("No related animation hierarchy");
+        if(roots.Count==1)return roots.First();
+        GameObject? best=null;int bestTracks=-1;long bestKeys=-1,bestVertices=-1;
+        foreach(var root in roots.OrderBy(g=>g.assetsFile.fullName,StringComparer.Ordinal).ThenBy(g=>g.m_PathID))
+        {
+            // A clip can be referenced by stripped LOD/effect variants. Picking
+            // the first related root (or just the most geometry) may discard
+            // every curve even when another explicitly related rig binds it.
+            var options=new ModelConverter.Options{game=clip.assetsFile.game,imageFormat=ImageFormat.Png,collectAnimations=false,exportMaterials=false,materials=[],uvs=Enumerable.Range(0,8).ToDictionary(i=>"UV"+i,i=>(true,i)),texs=[]};
+            var model=new ModelConverter(root,options,[clip]);
+            var bound=model.AnimationList.SelectMany(a=>a.TrackList).Where(t=>!string.IsNullOrEmpty(t.Path)&&model.RootFrame.FindFrameByPath(t.Path)!=null&&t.Rotations.Count+t.Translations.Count+t.Scalings.Count+(t.BlendShape?.Keyframes.Count??0)>0).ToArray();
+            long keys=bound.Sum(t=>(long)t.Rotations.Count+t.Translations.Count+t.Scalings.Count+(t.BlendShape?.Keyframes.Count??0));
+            long vertices=model.MeshList.Sum(m=>(long)m.VertexList.Count);
+            if(bound.Length>bestTracks||bound.Length==bestTracks&&(keys>bestKeys||keys==bestKeys&&vertices>bestVertices))
+            {best=root;bestTracks=bound.Length;bestKeys=keys;bestVertices=vertices;}
+        }
+        return best!;
+    }
     static IEnumerable<GameObject> Hierarchy(GameObject root)
     {
         var seen=new HashSet<Transform>();var queue=new Queue<Transform>();queue.Enqueue(root.m_Transform);
@@ -49,10 +69,7 @@ internal static class AnimationPreview
         if(roots.Count>1){
             // A reused clip can reference many LODs/skins; overlaying all of
             // them produces a broken scene and ambiguous duplicate bone names.
-            long Detail(GameObject root)=>descendants[root].Sum(g=>
-                g.m_SkinnedMeshRenderer?.m_Mesh.TryGet(out var skinned)==true?(long)skinned.m_VertexCount:
-                g.m_MeshFilter?.m_Mesh.TryGet(out var mesh)==true?(long)mesh.m_VertexCount:0);
-            roots=[roots.OrderByDescending(Detail).ThenBy(g=>g.assetsFile.fullName,StringComparer.Ordinal).ThenBy(g=>g.m_PathID).First()];
+            roots=[SelectBestRoot(roots,clip)];
             warnings.Add("variants");
         }
         var related=roots.SelectMany(r=>descendants[r]).Distinct().ToArray();

@@ -5,6 +5,8 @@
     <Compile Include="../Hok.Worker/ResourceAsset.cs" Link="ResourceAsset.cs" />
     <Compile Include="../Hok.Worker/ResourceSliceStream.cs" Link="ResourceSliceStream.cs" />
     <Compile Include="../Hok.Worker/HokStructured.cs" Link="HokStructured.cs" />
+    <Compile Include="../Hok.Worker/HokXmlData.cs" Link="HokXmlData.cs" />
+    <Compile Include="../Hok.Worker/StdrTable.cs" Link="StdrTable.cs" />
     <Compile Include="../Hok.Worker/WwiseIndex.cs" Link="WwiseIndex.cs" />
     <Compile Include="../Hok.Worker/AudioTools.cs" Link="AudioTools.cs" />
     <Compile Include="../Hok.Worker/AudioValidation.cs" Link="AudioValidation.cs" />

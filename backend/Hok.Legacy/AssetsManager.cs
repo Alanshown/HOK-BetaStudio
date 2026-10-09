@@ -905,6 +905,7 @@ namespace AssetStudio
                             ClassIDType.Transform when ClassIDType.Transform.CanParse() => new Transform(objectReader),
                             ClassIDType.VideoClip when ClassIDType.VideoClip.CanParse() => new VideoClip(objectReader),
                             ClassIDType.ResourceManager when ClassIDType.ResourceManager.CanParse() => new ResourceManager(objectReader),
+                            ClassIDType.ResourceVolumeContext when HokResourceVolumeContext.Supports(objectReader) => new HokResourceVolumeContext(objectReader),
                             _ => new Object(objectReader),
                         };
                         status.Parser = obj.GetType().Name;

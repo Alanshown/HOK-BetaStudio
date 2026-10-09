@@ -12,7 +12,8 @@ namespace AssetStudio
         public long RemainingBytes { get; set; }
         public string Error { get; set; }
         public bool Typed { get; set; }
-        public static string ClassName(int classId) => Enum.IsDefined(typeof(ClassIDType), classId)
-            ? ((ClassIDType)classId).ToString() : "UnknownClass_" + classId;
+        public static string ClassName(int classId,SerializedType serializedType=null) => Enum.IsDefined(typeof(ClassIDType), classId)
+            ? ((ClassIDType)classId).ToString() : serializedType?.m_Type?.m_Nodes?.Count>0
+            ? serializedType.m_Type.m_Nodes[0].m_Type : "UnknownClass_" + classId;
     }
 }

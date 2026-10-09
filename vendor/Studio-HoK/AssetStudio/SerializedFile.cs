@@ -29,6 +29,7 @@ namespace AssetStudio
         public string unityVersion = "2.5.0f5";
         public BuildTarget m_TargetPlatform = BuildTarget.UnknownPlatform;
         private bool m_EnableTypeTree = true;
+        private bool hokStrippedTypeTree;
         public List<SerializedType> m_Types;
         public int bigIDEnabled = 0;
         public List<ObjectInfo> m_Objects;
@@ -105,6 +106,7 @@ namespace AssetStudio
             if (header.m_Version >= SerializedFileFormatVersion.HasTypeTreeHashes)
             {
                 m_EnableTypeTree = reader.ReadBoolean();
+                hokStrippedTypeTree = m_EnableTypeTree && game.Type.IsHonorOfKings();
                 if (game.Type.IsHonorOfKings())
                 {
                     m_EnableTypeTree = false;
@@ -119,7 +121,7 @@ namespace AssetStudio
             {
                 var type = ReadSerializedType(false);
                 m_Types.Add(type);
-                if (game.Type.IsHonorOfKings())
+                if (hokStrippedTypeTree)
                 {
                     // HOK strips the tree nodes but retains the counted type
                     // dependency list. Most files have zero; treating its count
@@ -333,7 +335,7 @@ namespace AssetStudio
                 }
             }
 
-            if (!m_EnableTypeTree && game.Type.IsHonorOfKings() && isRefType &&
+            if (hokStrippedTypeTree && isRefType &&
                 header.m_Version >= SerializedFileFormatVersion.StoresTypeDependencies)
             {
                 // Managed-reference names survive even when HOK removes tree

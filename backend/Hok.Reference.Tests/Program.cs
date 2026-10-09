@@ -10,7 +10,7 @@ var results=new List<object>();int failed=0;
 void Check(bool success,string name){results.Add(new{name,success});Console.WriteLine((success?"PASS ":"FAIL ")+name);if(!success)failed++;}
 byte[] Serialized(string name,string? external=null){
  using var data=new MemoryStream();using var dw=new BinaryWriter(data);dw.Write(Encoding.UTF8.GetByteCount(name));dw.Write(Encoding.UTF8.GetBytes(name));while(data.Position%4!=0)dw.Write((byte)0);dw.Write(4);dw.Write(new byte[]{1,2,3,4});
- using var meta=new MemoryStream();using var w=new BinaryWriter(meta);w.Write("2018.4.0f1\0"u8);w.Write(13);w.Write(false);w.Write(1);w.Write(49);w.Write(false);w.Write((short)-1);w.Write(new byte[16]);w.Write(0);w.Write(1);while((20+meta.Position)%4!=0)w.Write((byte)0);w.Write(777L);w.Write(0);w.Write((uint)data.Length);w.Write(0);w.Write(0);w.Write(external is null?0:1);if(external is not null){w.Write((byte)0);w.Write(new byte[16]);w.Write(0);w.Write(Encoding.UTF8.GetBytes(external));w.Write((byte)0);}w.Write((byte)0);
+ using var meta=new MemoryStream();using var w=new BinaryWriter(meta);w.Write("2018.4.0f1\0"u8);w.Write(13);w.Write(true);w.Write(1);w.Write(49);w.Write(false);w.Write((short)-1);w.Write(new byte[16]);w.Write(0);w.Write(1);while((20+meta.Position)%4!=0)w.Write((byte)0);w.Write(777L);w.Write(0);w.Write((uint)data.Length);w.Write(0);w.Write(0);w.Write(external is null?0:1);if(external is not null){w.Write((byte)0);w.Write(new byte[16]);w.Write(0);w.Write(Encoding.UTF8.GetBytes(external));w.Write((byte)0);}w.Write((byte)0);
  int offset=(20+(int)meta.Length+15)/16*16;var bytes=new byte[offset+data.Length];BinaryPrimitives.WriteInt32BigEndian(bytes,(int)meta.Length);BinaryPrimitives.WriteInt32BigEndian(bytes.AsSpan(4),bytes.Length);BinaryPrimitives.WriteInt32BigEndian(bytes.AsSpan(8),17);BinaryPrimitives.WriteInt32BigEndian(bytes.AsSpan(12),offset);meta.ToArray().CopyTo(bytes,20);data.ToArray().CopyTo(bytes,offset);return bytes;
 }
 string Put(string name,byte[] bytes){var p=Path.GetFullPath(Path.Combine(scratch,name));Directory.CreateDirectory(Path.GetDirectoryName(p)!);File.WriteAllBytes(p,bytes);return p;}
@@ -93,15 +93,49 @@ foreach(var order in new[]{new[]{0,1},new[]{1,0}}){
  foreign.originalPath=Path.Combine(scratch,"foreign.db");
  var pointer=new PPtr<TextAsset>(1,777,owner);
  Check(pointer.TryGet(out var local)&&local.Name=="guid-owner","GUID-only local object takes priority");
+ Check(pointer.ResolveEvidence() is {Status:"local-candidate",IdentityConfirmed:false},"GUID-only fallback is not GUID identity proof");
+ Check(new PPtr<TextAsset>(0,777,owner).ResolveEvidence() is {Status:"confirmed",IdentityConfirmed:true},"fileID zero identifies its own SerializedFile");
  owner.ObjectsDic.Remove(777);
+ Check(new PPtr<TextAsset>(0,777,owner).ResolveEvidence() is {Status:"structure-unparsed",CanRead:false},"raw object-table entry is not reported missing");
  Check(pointer.TryGet(out var scoped)&&scoped.Name=="guid-target","GUID-only reference resolves unique same-DB target");
  target.originalPath=foreign.originalPath;
+ m.InvalidateReferenceResolution();
  Check(!pointer.TryGet(out _),"GUID-only missing target cannot borrow foreign DB objects");
  target.originalPath=foreign.originalPath=owner.originalPath;
+ m.InvalidateReferenceResolution();
  Check(!pointer.TryGet(out _),"ambiguous GUID-only same-DB objects are rejected");
+ Check(pointer.ResolveEvidence().Status=="conflict","same-DB PathID collision reports conflict evidence");
  foreign.originalPath=Path.Combine(scratch,"foreign.db");
+ m.InvalidateReferenceResolution();
  Check(pointer.TryGet(out var unique)&&unique.Name=="guid-target","GUID-only target re-resolves without stale alias cache");
+ owner.m_Externals[0].guid=new Guid(Convert.FromHexString("00000000000000000E00000000000000"));
+ Check(pointer.ResolveEvidence().Status=="builtin-resource","raw Unity built-in GUID does not become a missing game package");
  m.Clear();
+}
+// Field offsets must be from the binary reader, not a guessed string/ID scan.
+{
+ var m=Manager();m.LoadFilesReadOnly(owners[0]);var file=m.assetsFileList.Single(f=>f.fullName==owners[0]);var info=file.m_Objects.Single();
+ using var reader=new ObjectReader(file.reader,file,info,m.Game);reader.Reset();var ptr=new PPtr<AssetStudio.Object>(reader);
+ Check(ptr.SerializedByteOffset==info.byteStart&&ptr.ObjectByteOffset==0,"PPtr retains absolute and object-relative field offsets");
+ Check(ptr.Cast<TextAsset>().SerializedByteOffset==ptr.SerializedByteOffset,"PPtr cast preserves provenance");
+ var range=new ObjectInfo{m_PathID=info.m_PathID,byteStart=info.byteStart,byteSize=12,classID=info.classID,serializedType=info.serializedType};
+ using var bounded=new ObjectReader(file.reader,file,range,m.Game);
+ var tree=new TypeTree{m_Nodes=[new("Root","Base",0,false),new("PPtr<Object>","link",1,false),new("int","m_FileID",2,false),new("SInt64","m_PathID",2,false)]};
+ var found=new List<(string Field,int FileId,long PathId,long Offset)>();
+ TypeTreeHelper.ReadType(tree,bounded,(field,fid,pid,offset)=>found.Add((field,fid,pid,offset)));
+ Check(found.Count==1&&found[0]==("link",ptr.FileId,ptr.PathId,info.byteStart),"validated type-tree pointer has exact field and byte offset");
+ m.Clear();
+}
+// Reusing an output name must not leave stale bytes from a longer export.
+foreach(var reverse in new[]{false,true})
+{
+ string logical="unity_buildin_payload/resourcesvolumecontext.asset";
+ var a=Put("qts-path/owner.assets",Serialized("qts-owner",logical));var b=Put("qts-target/target.assets",Serialized("qts-target"));
+ var m=Manager();m.LoadFilesReadOnly(reverse?[b,a]:[a,b]);var owner=m.assetsFileList.Single(f=>f.fullName==a);var target=m.assetsFileList.Single(f=>f.fullName==b);
+ owner.originalPath=Path.Combine(scratch,"skin.db");target.originalPath=Path.Combine(scratch,"shared.db");target.containerEntryId=QtsVFSFile.Compute(logical,true).ToString();
+ m.InvalidateReferenceResolution();var ptr=new PPtr<TextAsset>(1,777,owner);
+ Check(ptr.TryGet(out var text)&&text.Name=="qts-target"&&ptr.ResolveEvidence() is {Status:"confirmed",IdentityConfirmed:true},"explicit QTS logical path resolves numeric entry across DBs / "+reverse);
+ target.containerEntryId="123";m.InvalidateReferenceResolution();Check(!ptr.TryGet(out _),"wrong QTS entry cannot satisfy a matching PathID / "+reverse);m.Clear();
 }
 // Reusing an output name must not leave stale bytes from a longer export.
 {

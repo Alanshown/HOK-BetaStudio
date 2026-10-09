@@ -1,0 +1,12 @@
+const assert=require('node:assert/strict'),{scanStatus}=require('./evidence-scan-status.cjs');
+const full={ok:true,load:{errorCount:0},indexed:{errors:0,entryIssues:0,statuses:{'typed-complete':20,deferred:3}}};
+assert.equal(scanStatus(full).ok,true);
+assert.equal(scanStatus({...full,ok:false}).rpcCompleted,false);
+assert.equal(scanStatus({...full,load:{errorCount:1}}).ok,false);
+const partial=scanStatus({...full,indexed:{...full.indexed,statuses:{'typed-partial':23,'generic-raw':1}}});
+assert.equal(partial.ok,false);assert.equal(partial.rpcCompleted,true);assert.equal(partial.readErrors,0);assert.equal(partial.incompleteObjects,24);
+assert.equal(scanStatus({...full,indexed:{...full.indexed,entryIssues:2}}).ok,false);
+assert.equal(scanStatus({...full,deep:true}).ok,false,'A requested deep audit cannot pass with undecoded objects');
+assert.equal(scanStatus({...full,deep:true}).incompleteObjects,3);
+assert.equal(scanStatus({...full,deep:true,indexed:{...full.indexed,statuses:{'typed-complete':23}}}).ok,true);
+console.log(JSON.stringify({passed:11,scope:'Partial interpretation or a still-deferred deep audit cannot become successful merely because no exception was logged'}));

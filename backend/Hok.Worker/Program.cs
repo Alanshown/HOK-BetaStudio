@@ -42,7 +42,8 @@ internal static partial class Program {
   manager?.Clear();cancellationEvent?.Dispose();return 0;
  }
  static object Dispatch(string method,JsonElement p)=>method switch {
-  "load"=>Load(p.GetProperty("paths").EnumerateArray().Select(x=>x.GetString()!).ToArray(),p.TryGetProperty("dependencyPaths",out var dependencies)?dependencies.EnumerateArray().Select(x=>x.GetString()!).ToArray():[],p.TryGetProperty("eager",out var eager)&&eager.GetBoolean()),
+  "load"=>Load(p.GetProperty("paths").EnumerateArray().Select(x=>x.GetString()!).ToArray(),p.TryGetProperty("dependencyPaths",out var dependencies)?dependencies.EnumerateArray().Select(x=>x.GetString()!).ToArray():[],p.TryGetProperty("eager",out var eager)&&eager.GetBoolean(),p.TryGetProperty("typeSchemaPaths",out var schemas)?schemas.EnumerateArray().Select(x=>x.GetString()!).ToArray():[],p.TryGetProperty("qtsEntrySelection",out var selection)?selection.Deserialize<Dictionary<string,string[]>>(Json):null),
+  "evidenceIndex"=>EvidenceIndex(p),
   "list"=>List(p),"asset"=>Row(p.GetProperty("assetId").GetString()!),"streamReferences"=>StreamReferences(p),"rawList"=>RawList(p),"rawDetail"=>RawDetail(p),"rawExport"=>RawExport(p),"rawAudit"=>RawAudit(p),"neighbors"=>Neighbors(p.GetProperty("assetId").GetString()!),
   "bank"=>Bank(p.GetProperty("assetId").GetString()!),
   "preview"=>Preview(p.GetProperty("assetId").GetString()!,p.TryGetProperty("output",out var previewOutput)?previewOutput.GetString():null),"export"=>Export(p),"releasePreview"=>ReleaseDecodedPreview(),
@@ -54,22 +55,32 @@ internal static partial class Program {
  static string Hash(string text)=>Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text.ToUpperInvariant())))[..16];
  static void AddResource(ResourceAsset item){
   if(!Resources.TryAdd(item.Id,item))return;
-  Rows.Add(new(item.Id,item.Name,item.Type,item.Id.Split('/').Last(),item.Source,item.Length.ToString(),item.Formats,item.Preview));
+  Rows.Add(new(item.Id,item.Name,item.Type,item.Id.Split('/').Last(),item.Source,item.Length.ToString(),item.Formats,item.Preview,
+   ParseStatus:item.Warning!=null?"parser-failed":item.Backing?.Kind=="ArchiveMember"?"signature-identified":null,Warning:item.Warning));
  }
- static object Load(string[] paths,string[] dependencyPaths,bool eager=false) {
+ static object Load(string[] paths,string[] dependencyPaths,bool eager=false,string[]? typeSchemaPaths=null,Dictionary<string,string[]>? qtsEntrySelection=null) {
   replacements=null;manager?.Clear();Objects.Clear();Resources.Clear();Rows.Clear();RowIndex.Clear();RawIndex.Clear();RawRows.Clear();ResourceAsset.ResetMetrics();var log=new CaptureLog();Logger.Default=log;
   manager=new AssetsManager{Game=GameManager.GetGame(GameType.HonorOfKings),QtsCacheDirectory=cache};
   manager.SetQtsDependencySources(dependencyPaths);
+  foreach(var selection in qtsEntrySelection??[])manager.SetQtsEntrySelection(selection.Key,selection.Value.Select(ulong.Parse));
+  foreach(var schemaPath in typeSchemaPaths??[])manager.LoadQtsTypeDatabase(schemaPath);
   var accepted=new List<string>();
   foreach(var path in paths){if(!File.Exists(path))throw new FileNotFoundException(path);if(new FileInfo(path).Length<32){log.AddError(Path.GetFileName(path)+": truncated file header");continue;}accepted.Add(path);}
   manager.DeferHeavyObjects=!eager; // Always on demand in desktop use, including small DBs.
   if(accepted.Count>0)manager.LoadFilesReadOnly(accepted.ToArray());
+  int objectCapacity=manager.assetsFileList.Sum(f=>f.m_Objects.Count);
+  // A multi-million-object DB used to grow these three indexes repeatedly,
+  // temporarily retaining both the old and new backing arrays. Type-tree
+  // validation also leaves substantial short-lived dictionaries; collect them
+  // before allocating the UI indexes rather than after a possible OOM.
+  if(objectCapacity>100000)GC.Collect(GC.MaxGeneration,GCCollectionMode.Aggressive,true,true);
+  Objects.EnsureCapacity(objectCapacity);Rows.EnsureCapacity(objectCapacity);RowIndex.EnsureCapacity(objectCapacity);
   foreach(var file in manager.assetsFileList){
    string prefix=Hash(file.fullName);
    foreach(var meta in file.m_Objects){
     file.ObjectsDic.TryGetValue(meta.m_PathID,out var obj);
     file.ParseStatuses.TryGetValue(meta.m_PathID,out var parse);
-    string type=ObjectParseStatus.ClassName(meta.classID),status=parse?.Status??"not-attempted";
+    string type=ObjectParseStatus.ClassName(meta.classID,meta.serializedType),status=parse?.Status??"not-attempted";
     string? warning=status=="typed-complete"?null:$"{status}: {parse?.Error??"Incomplete semantic interpretation; original raw bytes remain available."}";
     var id=$"{prefix}:{meta.m_PathID}";
     if(obj is not null){
@@ -91,10 +102,15 @@ internal static partial class Program {
   }
   var capturedNames=new HashSet<string>(StringComparer.OrdinalIgnoreCase);
   foreach(var entry in manager.ContainerEntries){
-   capturedNames.Add(Path.GetFullPath(entry.Source)+"|"+entry.Id.Replace('\\','/'));var detected=ResourceAsset.Detect(entry.Head(),entry.Kind,entry.Length);
-   if(entry.QtsEntry is{} qts && detected.type is not ("ResourceFile" or "SerializedFile")){qts.Kind=detected.type;qts.ParseStatus="signature-identified";}
+   capturedNames.Add(Path.GetFullPath(entry.Source)+"|"+entry.Id.Replace('\\','/'));var detected=ResourceAsset.Detect(entry.Head(),entry.QtsEntry?.Kind??entry.Kind,entry.Length);
+   if(entry.Kind=="ArchiveMember"&&detected.type=="ResourceFile"){
+    string suffix=Path.GetExtension(entry.DisplayName??"").TrimStart('.').ToLowerInvariant();
+    detected=("ArchiveFile",suffix.Length is >0 and <=16&&suffix.All(char.IsAsciiLetterOrDigit)?suffix:"bin");
+   }
+   if(entry.QtsEntry is{} qts && detected.type is not ("ResourceFile" or "SerializedFile")){qts.Kind=detected.type;if(qts.ParseStatus is not ("key-value-table-read" or "type-schemas-read" or "parser-failed"))qts.ParseStatus="signature-identified";}
    if(entry.QtsEntry is not null && detected.type is "ResourceFile" or "SerializedFile")continue; // Complete source containers live in QtsVFS Raw.
-   AddResource(new($"entry:{Hash(entry.Source)}/{entry.Id}",entry.Id+"."+detected.extension,entry.Source,detected.type,detected.extension,[],Warning:entry.Warning,Backing:entry));
+   var resourceName=entry.DisplayName??entry.QtsEntry?.MetadataName??(detected.type=="NumpyArray"?Path.GetFileName(entry.Id):entry.Id+"."+detected.extension);
+   AddResource(new($"entry:{Hash(entry.Source)}/{entry.Id}",resourceName,entry.Source,detected.type,detected.extension,[],Warning:entry.QtsEntry?.Error??entry.Warning,Backing:entry));
   }
   foreach(var pair in manager.ResourceFiles.Where(p=>!capturedNames.Contains(p.Key))){
    var stream=pair.Value.BaseStream;long position=stream.Position;
@@ -113,12 +129,12 @@ internal static partial class Program {
   LinkResourceTypes();
   // Editing candidates must not live in the WebView's publicly mapped preview directory.
   var editCache=Path.Combine(Path.GetDirectoryName(cache)!,"editing",Path.GetFileName(cache));
-  replacements=new ReplacementSession(manager,Objects,Resources,accepted.ToArray(),editCache);
+  replacements=manager.QtsLoadIsScoped?null:new ReplacementSession(manager,Objects,Resources,accepted.ToArray(),editCache);
   // Decoding creates short-lived, often large buffers. Reclaim them before a
   // desktop client mistakes the decode peak for the idle working-set footprint.
   if(Rows.Count>100000)GC.Collect(GC.MaxGeneration,GCCollectionMode.Aggressive,true,true);
-  return new{count=Rows.Count,rawEntries=RawIndex.Count,unityObjects=Objects.Count,containerFiles=manager.ContainerEntries.Count,serializedFiles=manager.assetsFileList.Count,errors=log.Errors,errorCount=log.ErrorCount,warningCount=log.WarningCount,errorsTruncated=log.ErrorsTruncated,
-   retainedManagedBytes=GC.GetTotalMemory(false),materializedResourceBytes=ResourceAsset.MaterializedBytes,objectTableRows=manager.assetsFileList.Sum(f=>f.m_Objects.Count),parseStatuses=manager.assetsFileList.SelectMany(f=>f.ParseStatuses.Values).GroupBy(s=>s.Status).ToDictionary(g=>g.Key,g=>g.Count()),loadedFiles=accepted.ToArray(),types=Rows.GroupBy(x=>x.Type).ToDictionary(g=>g.Key,g=>g.Count())};
+  return new{count=Rows.Count,scopedEntryLoad=manager.QtsLoadIsScoped,rawEntries=RawIndex.Count,unityObjects=Objects.Count,containerFiles=manager.ContainerEntries.Count,serializedFiles=manager.assetsFileList.Count,errors=log.Errors,errorCount=log.ErrorCount,warningCount=log.WarningCount,errorsTruncated=log.ErrorsTruncated,
+   typeSchemaSources=manager.QtsTypeSchemaSources,retainedManagedBytes=GC.GetTotalMemory(false),materializedResourceBytes=ResourceAsset.MaterializedBytes,objectTableRows=manager.assetsFileList.Sum(f=>f.m_Objects.Count),parseStatuses=manager.assetsFileList.SelectMany(f=>f.ParseStatuses.Values).GroupBy(s=>s.Status).ToDictionary(g=>g.Key,g=>g.Count()),loadedFiles=accepted.ToArray(),types=Rows.GroupBy(x=>x.Type).ToDictionary(g=>g.Key,g=>g.Count())};
  }
  static object List(JsonElement p) {
   var query=p.TryGetProperty("query",out var q)?q.GetString()??"":"";
@@ -140,7 +156,7 @@ internal static partial class Program {
   int index=list.FindIndex(r=>r.Id==id);return new{index=index+1,total=list.Count,previous=index>0?RefreshRow(list[index-1]):null,next=index+1<list.Count?RefreshRow(list[index+1]):null};
  }
  static object Dump(string id) {
-  string text=Resources.TryGetValue(id,out var resource)?JsonSerializer.Serialize(resource.IsStructured?HokStructured.Parse(resource):resource.Describe(),new JsonSerializerOptions(Json){WriteIndented=true}):Objects.TryGetValue(id,out var obj)?DeferredObject.Resolve(obj).Dump()??Exporters.ToJson(obj):throw new InvalidOperationException("Asset no longer loaded");
+  string text=Resources.TryGetValue(id,out var resource)?JsonSerializer.Serialize(resource.IsStructured?HokStructured.Parse(resource,preview:true):resource.Describe(),new JsonSerializerOptions(Json){WriteIndented=true}):Objects.TryGetValue(id,out var obj)?DeferredObject.Resolve(obj).Dump()??Exporters.ToJson(obj):throw new InvalidOperationException("Asset no longer loaded");
   var row=Row(id);if(row.ParseStatus is not null)text=$"Class ID: {row.ClassId}; PathID: {row.PathId}; parse status: {row.ParseStatus}\nSource: {row.Source}\nConsumed bytes: {row.ConsumedBytes}; remaining bytes: {row.RemainingBytes}\n{row.Warning}\n\n"+text;
   return new{text=text.Length>262144?text[..262144]+"\n[TRUNCATED: preview limited to 262144 characters; export JSON/raw for complete data.]":text,truncated=text.Length>262144};
  }
@@ -195,7 +211,11 @@ internal static partial class Program {
     }
     if(!File.Exists(dest))throw new InvalidDataException("Exporter produced no file");
     success++;results.Add(new{id,ok=true,path=dest,format=chosen,requestedFormat,rawFallback=warning is not null,warning,warnings});
-   }catch(Exception ex){results.Add(new{id,ok=false,error=ex.GetBaseException().Message,format});}
+   }catch(Exception ex){
+    Console.Error.WriteLine($"Export {id} as {format}: {ex}");
+    var cause=ex.GetBaseException();
+    results.Add(new{id,ok=false,error=cause.Message,errorType=cause.GetType().FullName,hresult=$"0x{cause.HResult:X8}",format});
+   }
   }
   var report=new{created=DateTimeOffset.UtcNow,success,failed=ids.Length-success,rawFallback,results};
   File.WriteAllText(Path.Combine(output,"export-"+DateTime.UtcNow.ToString("yyyyMMdd-HHmmss")+"-"+Guid.NewGuid().ToString("N")[..6]+".json"),JsonSerializer.Serialize(report,Json));

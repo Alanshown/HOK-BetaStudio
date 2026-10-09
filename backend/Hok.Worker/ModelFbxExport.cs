@@ -63,14 +63,21 @@ internal static class ModelFbxExport
             model = Create(()=>roots.Count > 0 ? new ModelConverter(roots[0], options) : new ModelConverter(mesh, options));
             if (roots.Count == 0) warnings.Add("No related renderer/hierarchy was found. Exported mesh geometry and morph targets; no skeleton or animation was invented.");
             if (model.MeshList.Count == 0) throw new InvalidDataException("Selected mesh was not found in its referenced hierarchy");
+            if(model.SkippedMeshInstances>0)warnings.Add($"This mesh has {model.SkippedMeshInstances+1} renderer instances in the related hierarchy. Mesh-asset export keeps one deterministic geometry instance; use GameObject export to retain all scene instances.");
         }
         else if (obj is AnimationClip clip)
         {
+            var curves=AnimationCurves.Read(clip);
+            var unsupported=curves.Tracks.Count(t=>t.Property is not ("position" or "rotation" or "scale" or "euler") && !t.Property.StartsWith("blendShape.",StringComparison.Ordinal));
+            if(unsupported>0||curves.ObjectReferenceCurves>0)
+                warnings.Add($"FBX does not preserve {unsupported} material/component curves and {curves.ObjectReferenceCurves} object-reference curves. Export ANIM and curves JSON to retain these source channels.");
+            if(curves.Tracks.Count>0&&unsupported==curves.Tracks.Count)
+                throw new InvalidDataException("This clip contains material/component animation only, not skeleton or morph tracks supported by FBX. Export ANIM and curves JSON instead.");
             var roots = AnimationPreview.FindRoots(obj.assetsFile.assetsManager, clip);
             if (roots.Count == 0) throw new InvalidDataException("No model references this AnimationClip in the imported files. Import its model DB as well, or export ANIM / curves JSON.");
             options.collectAnimations = false;
-            var root = roots.OrderBy(g=>g.assetsFile.fullName, StringComparer.Ordinal).ThenBy(g=>g.m_PathID).First();
-            if (roots.Count > 1) warnings.Add("This clip is shared by several model instances; exported one related hierarchy.");
+            var root = AnimationPreview.SelectBestRoot(roots,clip);
+            if (roots.Count > 1) warnings.Add("This clip is shared by several model instances; exported the related hierarchy with the most bound animation tracks (then keys and geometry), with deterministic tie-breaking.");
             model = Create(()=>new ModelConverter(root, options, [clip]));
         }
         else model = Create(()=>obj switch { Animator a=>new ModelConverter(a,options), GameObject g=>new ModelConverter(g,options), _=>throw new NotSupportedException("FBX source type") });

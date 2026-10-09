@@ -8,7 +8,7 @@ internal static class AnimationCurves
  internal sealed record Track(string Path,string Property,int? ClassId,Key[] Keys);
  internal sealed record Document(string Name,float Duration,float SampleRate,List<Track> Tracks,int ObjectReferenceCurves,string Mode="curves");
  public static Document Read(AnimationClip clip){
-  _=clip.Convert(); // Converts legacy + dense + streamed curves idempotently.
+  clip.PrepareExportCurves(); // Decode curves once without allocating an unused YAML document.
   var tracks=new List<Track>();
   void Add(string path,string property,int? classId,IEnumerable<Key> keys){var a=keys.ToArray();if(a.Any(k=>!float.IsFinite(k.Time)||k.Value.Any(v=>!float.IsFinite(v))))throw new InvalidDataException("Animation contains non-finite key time/value");if(a.Length>0)tracks.Add(new(path,property,classId,a));}
   foreach(var c in clip.m_PositionCurves)Add(c.path,"position",4,c.curve.m_Curve.Select(k=>new Key(k.time,[k.value.X,k.value.Y,k.value.Z])));

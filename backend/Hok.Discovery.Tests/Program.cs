@@ -12,16 +12,42 @@ void Check(bool ok,string message){if(!ok)throw new Exception(message);checks.Ad
 AssetsManager Manager()=>new(){Game=GameManager.GetGame(GameType.HonorOfKings)};
 Logger.Silent=true;
 byte[] Text(string name){using var ms=new MemoryStream();using var w=new BinaryWriter(ms);var bytes=Encoding.UTF8.GetBytes(name);w.Write(bytes.Length);w.Write(bytes);while(ms.Position%4!=0)w.Write((byte)0);w.Write(5);w.Write("hello"u8);return ms.ToArray();}
-byte[] Serialized(params (int Class,long Id,byte[] Data)[] objects){
+byte[] Serialized(params (int Class,long Id,byte[] Data)[] objects)=>SerializedLayout(true,objects);
+byte[] SerializedLayout(bool strippedTree,params (int Class,long Id,byte[] Data)[] objects){
  using var meta=new MemoryStream();using var w=new BinaryWriter(meta);using var raw=new MemoryStream();
- w.Write("2018.4.0f1\0"u8);w.Write(13);w.Write(false);w.Write(objects.Length);
- foreach(var o in objects){w.Write(o.Class);w.Write(false);w.Write((short)-1);if(o.Class==114)w.Write(new byte[16]);w.Write(new byte[16]);w.Write(0);}
+ w.Write("2018.4.0f1\0"u8);w.Write(13);w.Write(strippedTree);w.Write(objects.Length);
+ foreach(var o in objects){w.Write(o.Class);w.Write(false);w.Write((short)-1);if(o.Class==114)w.Write(new byte[16]);w.Write(new byte[16]);if(strippedTree)w.Write(0);}
  w.Write(objects.Length);
  for(int i=0;i<objects.Length;i++){var o=objects[i];while((20+meta.Position)%4!=0)w.Write((byte)0);while(raw.Position%4!=0)raw.WriteByte(0);w.Write(o.Id);w.Write((uint)raw.Position);w.Write((uint)o.Data.Length);w.Write(i);raw.Write(o.Data);}
  w.Write(0);w.Write(0);w.Write((byte)0);int offset=(20+(int)meta.Length+15)/16*16;var result=new byte[offset+raw.Length];
  BinaryPrimitives.WriteUInt32BigEndian(result,(uint)meta.Length);BinaryPrimitives.WriteUInt32BigEndian(result.AsSpan(4),(uint)result.Length);BinaryPrimitives.WriteUInt32BigEndian(result.AsSpan(8),17);BinaryPrimitives.WriteUInt32BigEndian(result.AsSpan(12),(uint)offset);meta.ToArray().CopyTo(result,20);raw.ToArray().CopyTo(result,offset);return result;
 }
 string Write(string name,byte[] data){string f=Path.Combine(scratch,name);Directory.CreateDirectory(Path.GetDirectoryName(f)!);File.WriteAllBytes(f,data);return f;}
+// A main DB has eight-byte keys, while payload shards have sixteen-byte
+// resource/main/sub keys. Both may end exactly at the physical EOF.
+byte[] VfsRecord(int keyBytes)
+{
+ const int record=8192;byte[] payload="QTSF_PACKAGE"u8.ToArray();
+ int recordBytes=32+payload.Length+keyBytes;var bytes=new byte[record+recordBytes];
+ using var ms=new MemoryStream(bytes);using var w=new BinaryWriter(ms);
+ w.Write(new byte[]{1,0,0,2,1,2,3,4});w.Write(bytes.Length);w.Write(bytes.Length);
+ for(int i=0;i<8;i++){w.Write(-1);w.Write(0);}ms.Position=48;w.Write(128);w.Write(48);
+ ms.Position=128;w.Write(1);w.Write(1);ms.Position=152;w.Write(4096);
+ ms.Position=4096+2040;w.Write(record);ms.Position=4096+4080;w.Write(4096);w.Write(0);w.Write(-1);w.Write((ushort)1);w.Write((ushort)0);
+ ms.Position=record;w.Write(record);w.Write(-1);w.Write(recordBytes);w.Write(0);w.Write(0);w.Write(keyBytes);w.Write(payload.Length+4);w.Write(payload.Length);w.Write(payload);w.Write(123456789UL);
+ if(keyBytes==16){w.Write(7);w.Write(9);}return bytes;
+}
+foreach(int keyBytes in new[]{8,16})
+{
+ using var reader=new FileReader(Write("key-"+keyBytes+".db",VfsRecord(keyBytes)));var qts=new QtsVFSFile(reader);var chunk=qts.Entries.GetValueOrDefault(123456789UL)?.SingleOrDefault();
+ Check(qts.Issues.Count==0&&qts.Entries.Count==1&&chunk?.MainBlock==(keyBytes==16?7:0)&&chunk?.SubBlock==(keyBytes==16?9:0),"QTS "+keyBytes+"-byte key at exact EOF retains its record without reading a neighbor");
+}
+var boundedVfs=VfsRecord(16);BinaryPrimitives.WriteInt32LittleEndian(boundedVfs.AsSpan(8192+8),boundedVfs.Length-8192-4);
+using(var reader=new FileReader(Write("key-outside-record.db",boundedVfs))){var qts=new QtsVFSFile(reader);Check(qts.Entries.Count==0&&qts.Issues.Single().Contains("record boundary"),"VFS keys cannot consume bytes outside their record even inside the file");}
+var shortVfs=VfsRecord(8)[..^1];
+using(var reader=new FileReader(Write("truncated-key.db",shortVfs))){var qts=new QtsVFSFile(reader);Check(qts.Entries.Count==0&&qts.Issues.Count==1,"truncated eight-byte VFS key remains an explicit error");}
+var unknownKey=VfsRecord(8);BinaryPrimitives.WriteInt32LittleEndian(unknownKey.AsSpan(8192+20),12);
+using(var reader=new FileReader(Write("unknown-key.db",unknownKey))){var qts=new QtsVFSFile(reader);Check(qts.Entries.Count==0&&qts.Issues.Single().Contains("key length 12"),"unknown VFS key layouts are not silently guessed");}
 var broken=Write("broken.assets",Serialized((74,1,new byte[4]),(33,2,new byte[12]),(49,3,Text("survivor")),(123456789,4,new byte[]{1,2,3,4,5})));
 var manager=Manager();manager.LoadFilesReadOnly(broken);var file=manager.assetsFileList.Single();
 Check(file.ParseStatuses[1].Status=="parser-failed"&&file.ParseStatuses[2].Status=="parser-failed","malformed AnimationClip and primitive-only MeshFilter are bounded");
@@ -30,6 +56,12 @@ Check((int)file.ObjectsDic[4].type==123456789&&file.ParseStatuses[4].Status=="ge
 Check(file.ParseStatuses.Values.All(s=>s.ConsumedBytes>=0&&s.RemainingBytes>=0),"parse counters stay inside object ranges");
 foreach(var obj in file.Objects){var row=file.m_Objects.Single(m=>m.m_PathID==obj.m_PathID);Check(obj.GetRawData().SequenceEqual(File.ReadAllBytes(broken).AsSpan((int)row.byteStart,(int)row.byteSize).ToArray()),"byte-exact raw export "+obj.m_PathID);}
 manager.Clear();
+var noTree=Write("no-type-tree.assets",SerializedLayout(false,(49,123,Text("no-dependency-table"))));
+manager=Manager();manager.LoadFilesReadOnly(noTree);file=manager.assetsFileList.Single();
+Check(file.ObjectsDic[123].Name=="no-dependency-table"&&file.m_Types[0].m_TypeDependencies is null,"type-tree-disabled files do not consume objectCount as a dependency array");manager.Clear();
+var checksum="TTre.db 0x8223684D\nResEntriesDB.db 0x4E84C092\nResScriptDependenciesDB.db 0xA699F130\nBlobDB.db 0xF5B2A07F\n";
+Check(QtsChecksumManifest.TryParse(Encoding.ASCII.GetBytes(checksum),out var manifest)&&manifest.Count==4,"exact stored checksum manifest is recognized");
+Check(!QtsChecksumManifest.TryParse(Encoding.ASCII.GetBytes(checksum.Replace("BlobDB.db","Unknown.db")),out _)&&!QtsChecksumManifest.TryParse(Encoding.ASCII.GetBytes(checksum+"TTre.db 0x8223684D\n"),out _)&&!QtsChecksumManifest.TryParse(Encoding.ASCII.GetBytes(checksum.Replace("F5B2A07F","F5B2A07")),out _),"unknown names, duplicate records and truncated checksums are not raw-codec guesses");
 // Small DBs follow the same lazy-preview policy as large ones: names/identities
 // are visible without running a heavy parser, even if its payload is malformed.
 var heavyTypes=new[]{ClassIDType.Mesh,ClassIDType.AnimationClip,ClassIDType.Material,ClassIDType.Shader,ClassIDType.Font,ClassIDType.AudioClip,ClassIDType.VideoClip,ClassIDType.MovieTexture};
@@ -39,6 +71,21 @@ Check(file.Objects.Count==heavyTypes.Length&&file.Objects.All(o=>o is DeferredOb
 var font=file.Objects.Single(o=>o.type==ClassIDType.Font);try{DeferredObject.Resolve(font);}catch(EndOfStreamException){}catch(InvalidDataException){}
 Check(file.ParseStatuses[font.m_PathID].Status=="parser-failed"&&file.ParseStatuses.Where(p=>p.Key!=font.m_PathID).All(p=>p.Value.Status=="deferred"),"previewing a malformed font does not decode unrelated mesh, animation, audio, or material objects");
 manager.Clear();
+// Inject a transient storage error only after metadata/name indexing. A retry
+// must decode the unchanged payload, not repeat a cached parser-failed result.
+byte[] Movie(){using var ms=new MemoryStream();using var w=new BinaryWriter(ms);w.Write(5);w.Write("movie"u8);while(ms.Position%4!=0)w.Write((byte)0);w.Write(new byte[8+4+12]);w.Write(3);w.Write(new byte[]{7,8,9});return ms.ToArray();}
+foreach(var fault in new Exception[]{new IOException("Temporary cache read failure",unchecked((int)0x800705AA)),new OutOfMemoryException("Temporary read allocation failure")})
+{
+ using var faultStream=new FaultOnceStream(Serialized(((int)ClassIDType.MovieTexture,91,Movie())));
+ using var faultReader=new FileReader(Path.Combine(scratch,"retry.assets"),faultStream);
+ var faultManager=Manager();var faultFile=new SerializedFile(faultReader,faultManager);var meta=faultFile.m_Objects.Single();
+ var deferred=new DeferredObject(new ObjectReader(faultReader,faultFile,meta,faultManager.Game));
+ faultFile.ParseStatuses.Add(91,new ObjectParseStatus{Status="deferred",ConsumedBytes=0,RemainingBytes=meta.byteSize});
+ faultStream.Fault=fault;bool caught=false;try{deferred.Resolve();}catch(Exception e){caught=ReferenceEquals(e,fault);}
+ Check(caught&&faultFile.ParseStatuses[91].Status=="deferred"&&faultFile.ParseStatuses[91].Error==fault.Message,"transient "+fault.GetType().Name+" does not permanently mark valid media malformed");
+ var recovered=(MovieTexture)deferred.Resolve();
+ Check(recovered.m_MovieData.SequenceEqual(new byte[]{7,8,9})&&faultFile.ParseStatuses[91].Status=="typed-complete"&&faultFile.ParseStatuses[91].Error is null,"unchanged media retries successfully after "+fault.GetType().Name);
+}
 var a=Write("a/same.assets",Serialized((49,777,Text("one"))));var b=Write("b/same.assets",Serialized((49,777,Text("two"))));
 foreach(var order in new[]{new[]{a,b},new[]{b,a}}){manager=Manager();manager.LoadFilesReadOnly(order);Check(manager.assetsFileList.Count==2&&manager.assetsFileList.SelectMany(f=>f.Objects).Select(o=>o.Name).Order().SequenceEqual(new[]{"one","two"}),"same file name / PathID retained across sources");manager.Clear();}
 // HOK strips type tree nodes, not the dependency arrays or managed-reference
@@ -83,3 +130,12 @@ if(args.Length>1){
  manager.Clear();Check(paths.All(p=>hashes[p]==Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(p)))) ,"input hashes unchanged");
 }
 Console.WriteLine(JsonSerializer.Serialize(new{passed=checks.Count,checks,scratch}));
+
+sealed class FaultOnceStream(byte[] data):MemoryStream(data)
+{
+ public Exception? Fault;
+ void MaybeFail(){if(Fault is{} error){Fault=null;throw error;}}
+ public override int Read(Span<byte> buffer){MaybeFail();return base.Read(buffer);}
+ public override int Read(byte[] buffer,int offset,int count){MaybeFail();return base.Read(buffer,offset,count);}
+ public override int ReadByte(){MaybeFail();return base.ReadByte();}
+}
